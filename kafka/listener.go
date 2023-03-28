@@ -12,6 +12,8 @@ import (
 type listener struct {
 	client *kgo.Client
 
+	wg sync.WaitGroup
+
 	lock     sync.RWMutex
 	handlers map[events.Topic][]events.Handler
 }
@@ -40,13 +42,15 @@ func (l *listener) Handle(topic events.Topic, handler events.Handler) {
 }
 
 func (l *listener) Listen(ctx context.Context) error {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
 	for {
 		fetches := l.client.PollFetches(ctx)
 		if errs := fetches.Errors(); errs != nil {
 			// TODO Improve error handling
+			l.wg.Wait()
+			if errs[0].Err == context.Canceled {
+				return nil
+			}
+
 			return errs[0].Err
 		}
 
@@ -57,6 +61,7 @@ func (l *listener) Listen(ctx context.Context) error {
 			t := events.Type(record.Headers[0].Value)
 			event, _ := events.Decode(t, record.Value)
 
+			l.wg.Add(1)
 			go l.handleEvent(event)
 		}
 	}
@@ -67,17 +72,15 @@ func (l *listener) handleEvent(e events.Event) {
 	l.lock.RLock()
 	defer l.lock.RUnlock()
 
-	hh, ok := l.handlers[e.Topic()]
-	if !ok {
-		return
-	}
-
-	for _, h := range hh {
+	for _, h := range l.handlers[e.Topic()] {
+		l.wg.Add(1)
 		go func(h events.Handler) {
 			if err := h.Handle(e); err != nil {
-				// TODO Error Handling
+				// TODO Do some error Handling
 				log.Println(err)
 			}
+			l.wg.Done()
 		}(h)
 	}
+	l.wg.Done()
 }

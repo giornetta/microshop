@@ -45,4 +45,4 @@ services:
       - kafka-broker
     command: "bash -c 'echo Waiting for Kafka to be ready...' && \
                cub kafka-ready -b kafka:29092 1 30 && \
-               kafka-topics --create --topic Product --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:29092"
+               kafka-topics --create --topic Products --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:29092"
