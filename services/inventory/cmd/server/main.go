@@ -2,14 +2,15 @@ package main
 
 import (
 	"log"
-	"net/http"
+	"time"
 
 	"github.com/giornetta/microshop/kafka"
+	"github.com/giornetta/microshop/server"
 	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/giornetta/microshop/services/inventory"
+	"github.com/giornetta/microshop/services/inventory/http"
 	"github.com/giornetta/microshop/services/inventory/inmem"
-	"github.com/giornetta/microshop/services/inventory/server"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -35,7 +36,19 @@ func main() {
 		middleware.Logger,
 	)
 
-	router.Mount("/api/inventory", server.Router(productService))
+	router.Mount("/api/inventory", http.Router(productService))
 
-	http.ListenAndServe(":3000", router)
+	opts := &server.Options{
+		Port:         3000,
+		ReadTimeout:  time.Second * 5,
+		WriteTimeout: time.Second * 5,
+		IdleTimeout:  time.Second * 10,
+	}
+	s := server.New(router, opts)
+	defer s.Close()
+
+	log.Printf("Listening on port %d\n", opts.Port)
+	if err := s.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
 }
