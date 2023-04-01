@@ -9,6 +9,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
+// Listener fetches incoming Kafka messages, offering a simple API to specify handlers for them.
 type Listener struct {
 	client *kgo.Client
 
@@ -18,6 +19,7 @@ type Listener struct {
 	handlers map[events.Topic]events.Handler
 }
 
+// NewListener returns a new Kafka Listener.
 func NewListener(client *kgo.Client) (*Listener, error) {
 	l := &Listener{
 		client:   client,
@@ -27,6 +29,8 @@ func NewListener(client *kgo.Client) (*Listener, error) {
 	return l, nil
 }
 
+// Handle registers the given handler for the provided topic.
+// Calling this method a second time on the same topic will replace the handler.
 func (l *Listener) Handle(topic events.Topic, handler events.Handler) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
@@ -39,6 +43,8 @@ func (l *Listener) Handle(topic events.Topic, handler events.Handler) {
 	l.handlers[topic] = handler
 }
 
+// Listener is a blocking method that will fetch incoming kafka messages
+// until either an error occurs or the given context is canceled.
 func (l *Listener) Listen(ctx context.Context) error {
 	for {
 		fetches := l.client.PollFetches(ctx)

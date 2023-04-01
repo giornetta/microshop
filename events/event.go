@@ -20,6 +20,10 @@ func (t Type) String() string {
 
 type Key string
 
+func (k Key) String() string {
+	return string(k)
+}
+
 type Event interface {
 	Type() Type
 	Key() Key

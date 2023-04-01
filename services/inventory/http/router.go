@@ -8,26 +8,34 @@ import (
 
 	"github.com/giornetta/microshop/services/inventory"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type handler struct {
 	Service inventory.ProductService
 }
 
-func Router(service inventory.ProductService) chi.Router {
+func Router(service inventory.ProductService) http.Handler {
 	h := &handler{
 		Service: service,
 	}
 
-	r := chi.NewRouter()
+	router := chi.NewRouter()
 
-	r.Post("/", h.handleCreateProduct)
-	r.Get("/", h.handleListProducts)
-	r.Get("/{id}", h.handleGetProduct)
-	r.Put("/{id}", h.handleUpdateProduct)
-	r.Delete("/{id}", h.handleDeleteProduct)
+	router.Use(
+		middleware.Logger,
+		middleware.Recoverer,
+	)
 
-	return r
+	router.Route("/api/v1/products", func(r chi.Router) {
+		r.Post("/", h.handleCreateProduct)
+		r.Get("/", h.handleListProducts)
+		r.Get("/{id}", h.handleGetProduct)
+		r.Put("/{id}", h.handleUpdateProduct)
+		r.Delete("/{id}", h.handleDeleteProduct)
+	})
+
+	return router
 }
 
 type createProductRequest struct {
