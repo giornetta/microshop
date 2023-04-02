@@ -20,13 +20,13 @@ type Listener struct {
 }
 
 // NewListener returns a new Kafka Listener.
-func NewListener(client *kgo.Client) (*Listener, error) {
+func NewListener(client *kgo.Client) *Listener {
 	l := &Listener{
 		client:   client,
 		handlers: make(map[events.Topic]events.Handler),
 	}
 
-	return l, nil
+	return l
 }
 
 // Handle registers the given handler for the provided topic.

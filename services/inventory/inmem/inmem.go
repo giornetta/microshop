@@ -1,7 +1,6 @@
 package inmem
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/giornetta/microshop/services/inventory"
@@ -23,16 +22,6 @@ func (r *repository) Store(product *inventory.Product) error {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 
-	if _, ok := r.Products[product.Id]; ok {
-		return &inventory.ErrIDAlreadyExists{ProductId: product.Id}
-	}
-
-	for _, p := range r.Products {
-		if product.Name == p.Name {
-			return errors.New("product with same name already exists")
-		}
-	}
-
 	r.Products[product.Id] = product
 
 	return nil
@@ -48,6 +37,19 @@ func (r *repository) FindById(id inventory.ProductId) (*inventory.Product, error
 	}
 
 	return p, nil
+}
+
+func (r *repository) FindByName(name string) (*inventory.Product, error) {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
+
+	for _, p := range r.Products {
+		if p.Name == name {
+			return p, nil
+		}
+	}
+
+	return nil, &inventory.ErrNotFound{}
 }
 
 func (r *repository) List() ([]*inventory.Product, error) {

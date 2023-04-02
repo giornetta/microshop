@@ -22,10 +22,7 @@ func main() {
 	}
 	defer client.Close()
 
-	listener, err := kafka.NewListener(client)
-	if err != nil {
-		log.Fatalf("could not create listener: %v", err)
-	}
+	listener := kafka.NewListener(client)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

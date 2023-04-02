@@ -1,6 +1,8 @@
 package inventory
 
-import "context"
+import (
+	"context"
+)
 
 type ProductId string
 
@@ -16,6 +18,7 @@ type Product struct {
 	Amount      int
 }
 
+// TODO This should be changed
 func (p *Product) UpdateStock(amountDelta int) {
 	p.Amount += amountDelta
 	if p.Amount < 0 {
@@ -43,7 +46,7 @@ type UpdateProductRequest struct {
 	Id          ProductId `validate:"required"`
 	Name        string    `validate:"alphanum"`
 	Description string    `validate:"min=10"`
-	Price       float32
+	Price       float32   `validate:"gte=0"`
 }
 
 type RestockProductRequest struct {
@@ -54,6 +57,7 @@ type RestockProductRequest struct {
 type ProductRepository interface {
 	Store(product *Product) error
 	FindById(id ProductId) (*Product, error)
+	FindByName(name string) (*Product, error)
 	List() ([]*Product, error)
 	Update(product *Product) error
 	Delete(id ProductId) error

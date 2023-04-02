@@ -37,18 +37,13 @@ func (s *service) Create(req inventory.CreateProductRequest, ctx context.Context
 		Amount:      req.InitialAmount,
 	}
 
-	if err := s.Repository.Store(product); err != nil {
-		return nil, err
-	}
-
-	err := s.Producer.Publish(events.ProductCreated{
+	if err := s.Producer.Publish(events.ProductCreated{
 		ProductEvent: events.ProductEvent{ProductId: product.Id.String()},
 		Name:         product.Name,
 		Description:  product.Description,
 		Price:        product.Price,
 		Amount:       product.Amount,
-	}, ctx)
-	if err != nil {
+	}, ctx); err != nil {
 		log.Println(err)
 	}
 
@@ -85,18 +80,15 @@ func (s *service) Update(req inventory.UpdateProductRequest, ctx context.Context
 		product.Price = req.Price
 	}
 
-	if err := s.Repository.Update(product); err != nil {
-		return err
-	}
-
-	// TODO Errcheck and retries
-	_ = s.Producer.Publish(events.ProductUpdated{
+	if err := s.Producer.Publish(events.ProductUpdated{
 		ProductEvent: events.ProductEvent{ProductId: product.Id.String()},
 		Name:         product.Name,
 		Description:  product.Description,
 		Price:        product.Price,
 		Amount:       product.Amount,
-	}, ctx)
+	}, ctx); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -113,31 +105,29 @@ func (s *service) Restock(req inventory.RestockProductRequest, ctx context.Conte
 
 	product.UpdateStock(req.Amount)
 
-	if err := s.Repository.Update(product); err != nil {
-		return err
-	}
-
-	// TODO Errcheck and retries
-	_ = s.Producer.Publish(events.ProductUpdated{
+	if err := s.Producer.Publish(events.ProductUpdated{
 		ProductEvent: events.ProductEvent{ProductId: product.Id.String()},
 		Name:         product.Name,
 		Description:  product.Description,
 		Price:        product.Price,
 		Amount:       product.Amount,
-	}, ctx)
+	}, ctx); err != nil {
+		return nil
+	}
 
 	return nil
 }
 
 func (s *service) Delete(productId inventory.ProductId, ctx context.Context) error {
-	if err := s.Repository.Delete(productId); err != nil {
+	if _, err := s.Repository.FindById(productId); err != nil {
 		return err
 	}
 
-	// TODO Errcheck and retries
-	_ = s.Producer.Publish(events.ProductDeleted{
+	if err := s.Producer.Publish(events.ProductDeleted{
 		ProductEvent: events.ProductEvent{ProductId: productId.String()},
-	}, ctx)
+	}, ctx); err != nil {
+		return err
+	}
 
 	return nil
 }
