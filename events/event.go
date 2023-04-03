@@ -35,7 +35,7 @@ type Publisher interface {
 }
 
 type Handler interface {
-	Handle(e Event) error
+	Handle(e Event, ctx context.Context) error
 }
 
 type Decoder func(payload []byte) (Event, error)

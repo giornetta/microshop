@@ -65,13 +65,13 @@ func (l *Listener) Listen(ctx context.Context) error {
 			event, _ := events.Decode(t, record.Value)
 
 			l.wg.Add(1)
-			go l.handleEvent(event)
+			go l.handleEvent(event, ctx)
 		}
 	}
 
 }
 
-func (l *Listener) handleEvent(e events.Event) {
+func (l *Listener) handleEvent(e events.Event, ctx context.Context) {
 	l.lock.RLock()
 	defer l.lock.RUnlock()
 
@@ -82,7 +82,7 @@ func (l *Listener) handleEvent(e events.Event) {
 
 	l.wg.Add(1)
 	go func(h events.Handler) {
-		if err := h.Handle(e); err != nil {
+		if err := h.Handle(e, ctx); err != nil {
 			// TODO Do some error Handling
 			log.Println(err)
 		}

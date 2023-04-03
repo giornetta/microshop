@@ -172,3 +172,8 @@ fabric.properties
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/go,linux,visualstudiocode,goland
+
+# Services configuration
+.env
+
+cmd/**/config.yml

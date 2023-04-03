@@ -1,4 +1,4 @@
-package inventory
+package products
 
 import (
 	"context"
@@ -11,11 +11,11 @@ func (id ProductId) String() string {
 }
 
 type Product struct {
-	Id          ProductId
-	Name        string
-	Description string
-	Price       float32
-	Amount      int
+	Id          ProductId `db:"product_id"`
+	Name        string    `db:"name"`
+	Description string    `db:"description"`
+	Price       float32   `db:"price"`
+	Amount      int       `db:"amount"`
 }
 
 // TODO This should be changed
@@ -26,7 +26,7 @@ func (p *Product) UpdateStock(amountDelta int) {
 	}
 }
 
-type ProductService interface {
+type Service interface {
 	Create(req CreateProductRequest, ctx context.Context) (*Product, error)
 	GetById(productId ProductId, ctx context.Context) (*Product, error)
 	List(ctx context.Context) ([]*Product, error)
@@ -55,10 +55,10 @@ type RestockProductRequest struct {
 }
 
 type ProductRepository interface {
-	Store(product *Product) error
-	FindById(id ProductId) (*Product, error)
-	FindByName(name string) (*Product, error)
-	List() ([]*Product, error)
-	Update(product *Product) error
-	Delete(id ProductId) error
+	Store(product *Product, ctx context.Context) error
+	FindById(id ProductId, ctx context.Context) (*Product, error)
+	FindByName(name string, ctx context.Context) (*Product, error)
+	List(ctx context.Context) ([]*Product, error)
+	Update(product *Product, ctx context.Context) error
+	Delete(id ProductId, ctx context.Context) error
 }

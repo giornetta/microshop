@@ -6,16 +6,16 @@ import (
 
 	"github.com/giornetta/microshop/respond"
 
-	"github.com/giornetta/microshop/services/inventory"
+	"github.com/giornetta/microshop/products"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 type handler struct {
-	Service inventory.ProductService
+	Service products.Service
 }
 
-func Router(service inventory.ProductService) http.Handler {
+func Router(service products.Service) http.Handler {
 	h := &handler{
 		Service: service,
 	}
@@ -53,7 +53,7 @@ func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := h.Service.Create(inventory.CreateProductRequest{
+	p, err := h.Service.Create(products.CreateProductRequest{
 		Name:          req.Name,
 		Description:   req.Description,
 		Price:         req.Price,
@@ -80,7 +80,7 @@ func (h *handler) handleListProducts(w http.ResponseWriter, r *http.Request) {
 func (h *handler) handleGetProduct(w http.ResponseWriter, r *http.Request) {
 	productId := chi.URLParam(r, "id")
 
-	product, err := h.Service.GetById(inventory.ProductId(productId), r.Context())
+	product, err := h.Service.GetById(products.ProductId(productId), r.Context())
 	if err != nil {
 		respond.Err(w, http.StatusNotFound, err)
 		return
@@ -104,8 +104,8 @@ func (h *handler) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Service.Update(inventory.UpdateProductRequest{
-		Id:          inventory.ProductId(id),
+	if err := h.Service.Update(products.UpdateProductRequest{
+		Id:          products.ProductId(id),
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
@@ -120,7 +120,7 @@ func (h *handler) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
 	productId := chi.URLParam(r, "id")
 
-	if err := h.Service.Delete(inventory.ProductId(productId), r.Context()); err != nil {
+	if err := h.Service.Delete(products.ProductId(productId), r.Context()); err != nil {
 		respond.Err(w, http.StatusNotFound, err)
 		return
 	}

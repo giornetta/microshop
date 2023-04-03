@@ -1,22 +1,21 @@
-package service
+package products
 
 import (
 	"context"
 	"log"
 
 	"github.com/giornetta/microshop/events"
-	"github.com/giornetta/microshop/services/inventory"
 	"github.com/go-playground/validator/v10"
-	"github.com/segmentio/ksuid"
+	"github.com/google/uuid"
 )
 
 type service struct {
-	Repository inventory.ProductRepository
+	Repository ProductRepository
 	Producer   events.Publisher
 	Validator  *validator.Validate
 }
 
-func New(repository inventory.ProductRepository, producer events.Publisher) inventory.ProductService {
+func NewService(repository ProductRepository, producer events.Publisher) Service {
 	return &service{
 		Repository: repository,
 		Producer:   producer,
@@ -24,13 +23,13 @@ func New(repository inventory.ProductRepository, producer events.Publisher) inve
 	}
 }
 
-func (s *service) Create(req inventory.CreateProductRequest, ctx context.Context) (*inventory.Product, error) {
+func (s *service) Create(req CreateProductRequest, ctx context.Context) (*Product, error) {
 	if err := s.Validator.Struct(req); err != nil {
 		return nil, err
 	}
 
-	product := &inventory.Product{
-		Id:          inventory.ProductId(ksuid.New().String()),
+	product := &Product{
+		Id:          ProductId(uuid.New().String()),
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
@@ -50,20 +49,20 @@ func (s *service) Create(req inventory.CreateProductRequest, ctx context.Context
 	return product, nil
 }
 
-func (s *service) GetById(productId inventory.ProductId, ctx context.Context) (*inventory.Product, error) {
-	return s.Repository.FindById(productId)
+func (s *service) GetById(productId ProductId, ctx context.Context) (*Product, error) {
+	return s.Repository.FindById(productId, ctx)
 }
 
-func (s *service) List(ctx context.Context) ([]*inventory.Product, error) {
-	return s.Repository.List()
+func (s *service) List(ctx context.Context) ([]*Product, error) {
+	return s.Repository.List(ctx)
 }
 
-func (s *service) Update(req inventory.UpdateProductRequest, ctx context.Context) error {
+func (s *service) Update(req UpdateProductRequest, ctx context.Context) error {
 	if err := s.Validator.Struct(req); err != nil {
 		return err
 	}
 
-	product, err := s.Repository.FindById(req.Id)
+	product, err := s.Repository.FindById(req.Id, ctx)
 	if err != nil {
 		return nil
 	}
@@ -93,12 +92,12 @@ func (s *service) Update(req inventory.UpdateProductRequest, ctx context.Context
 	return nil
 }
 
-func (s *service) Restock(req inventory.RestockProductRequest, ctx context.Context) error {
+func (s *service) Restock(req RestockProductRequest, ctx context.Context) error {
 	if err := s.Validator.Struct(req); err != nil {
 		return err
 	}
 
-	product, err := s.Repository.FindById(req.Id)
+	product, err := s.Repository.FindById(req.Id, ctx)
 	if err != nil {
 		return nil
 	}
@@ -118,8 +117,8 @@ func (s *service) Restock(req inventory.RestockProductRequest, ctx context.Conte
 	return nil
 }
 
-func (s *service) Delete(productId inventory.ProductId, ctx context.Context) error {
-	if _, err := s.Repository.FindById(productId); err != nil {
+func (s *service) Delete(productId ProductId, ctx context.Context) error {
+	if _, err := s.Repository.FindById(productId, ctx); err != nil {
 		return err
 	}
 

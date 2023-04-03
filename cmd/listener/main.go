@@ -51,7 +51,7 @@ func main() {
 type h struct {
 }
 
-func (h *h) Handle(e events.Event) error {
+func (h *h) Handle(e events.Event, ctx context.Context) error {
 	fmt.Printf("got: %v, %v\n", e.Type(), e.Key())
 	return nil
 }
