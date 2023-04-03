@@ -11,11 +11,11 @@ func (id ProductId) String() string {
 }
 
 type Product struct {
-	Id          ProductId `db:"product_id"`
-	Name        string    `db:"name"`
-	Description string    `db:"description"`
-	Price       float32   `db:"price"`
-	Amount      int       `db:"amount"`
+	Id          ProductId
+	Name        string
+	Description string
+	Price       float32
+	Amount      int
 }
 
 // TODO This should be changed

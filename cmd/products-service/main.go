@@ -101,7 +101,7 @@ func main() {
 	}()
 
 	<-signals
-	logger.Info("Shutting down server...")
+	logger.Info("Shutting down server")
 	cancel()
 	s.Shutdown(ctx)
 
