@@ -38,9 +38,11 @@ func (r *repository) FindById(id products.ProductId, ctx context.Context) (*prod
 func (r *repository) FindByName(name string, ctx context.Context) (*products.Product, error) {
 	var product products.Product
 
-	err := r.pool.QueryRow(ctx, "SELECT product_id, name, description, price, amount FROM products WHERE name = $1", name).Scan(
-		&product.Id, &product.Name, &product.Description, &product.Price, &product.Amount)
-	if err != nil {
+	if err := r.pool.QueryRow(
+		ctx,
+		"SELECT product_id, name, description, price, amount FROM products WHERE name = $1",
+		name,
+	).Scan(&product.Id, &product.Name, &product.Description, &product.Price, &product.Amount); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, &products.ErrNotFound{Name: name}
 		}

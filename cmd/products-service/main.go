@@ -22,7 +22,7 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stderr))
+	logger := slog.New(slog.NewTextHandler(os.Stderr))
 
 	cfg, err := config.FromYaml("./config.yml")
 	if err != nil {

@@ -25,3 +25,15 @@ func (err *ErrNotFound) Error() string {
 func (err *ErrNotFound) StatusCode() int {
 	return http.StatusNotFound
 }
+
+type ErrAlreadyExists struct {
+	Name string
+}
+
+func (err *ErrAlreadyExists) Error() string {
+	return fmt.Sprintf("product with name=%s already exists", err.Name)
+}
+
+func (err *ErrAlreadyExists) StatusCode() int {
+	return http.StatusBadRequest
+}

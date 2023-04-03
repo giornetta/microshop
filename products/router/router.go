@@ -41,10 +41,10 @@ func New(service products.Service) http.Handler {
 }
 
 type createProductRequest struct {
-	Name          string  `json:"name"`
-	Description   string  `json:"description"`
-	Price         float32 `json:"price"`
-	InitialAmount int     `json:"initialAmount"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Price       float32 `json:"price"`
+	Amount      int     `json:"amount"`
 }
 
 func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
@@ -55,11 +55,11 @@ func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := h.Service.Create(products.CreateProductRequest{
-		Name:          req.Name,
-		Description:   req.Description,
-		Price:         req.Price,
-		InitialAmount: req.InitialAmount,
+	p, err := h.Service.Create(&products.CreateProductRequest{
+		Name:        req.Name,
+		Description: req.Description,
+		Price:       req.Price,
+		Amount:      req.Amount,
 	}, r.Context())
 	if err != nil {
 		respond.Err(w, err)
@@ -106,7 +106,7 @@ func (h *handler) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Service.Update(products.UpdateProductRequest{
+	if err := h.Service.Update(&products.UpdateProductRequest{
 		Id:          products.ProductId(id),
 		Name:        req.Name,
 		Description: req.Description,
@@ -132,7 +132,7 @@ func (h *handler) handleRestockProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Service.Restock(products.RestockProductRequest{
+	if err := h.Service.Restock(&products.RestockProductRequest{
 		Id:     products.ProductId(id),
 		Amount: int(req.Amount),
 	}, r.Context()); err != nil {

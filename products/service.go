@@ -2,10 +2,10 @@ package products
 
 import (
 	"context"
+	"log"
 
 	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/events"
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slog"
 )
@@ -13,20 +13,28 @@ import (
 type service struct {
 	Repository ProductRepository
 	Producer   events.Publisher
-	Validator  *validator.Validate
 }
 
 func NewService(repository ProductRepository, producer events.Publisher) Service {
 	return &service{
 		Repository: repository,
 		Producer:   producer,
-		Validator:  validator.New(),
 	}
 }
 
-func (s *service) Create(req CreateProductRequest, ctx context.Context) (*Product, error) {
-	if err := s.Validator.Struct(req); err != nil {
+func (s *service) Create(req *CreateProductRequest, ctx context.Context) (*Product, error) {
+	if err := req.Validate(); err != nil {
 		return nil, err
+	}
+
+	_, err := s.Repository.FindByName(req.Name, ctx)
+	if err == nil {
+		return nil, &ErrAlreadyExists{Name: req.Name}
+	}
+	if err != nil {
+		if _, ok := err.(*ErrNotFound); !ok {
+			return nil, err
+		}
 	}
 
 	product := &Product{
@@ -34,7 +42,7 @@ func (s *service) Create(req CreateProductRequest, ctx context.Context) (*Produc
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
-		Amount:      req.InitialAmount,
+		Amount:      req.Amount,
 	}
 
 	if err := s.Producer.Publish(events.ProductCreated{
@@ -68,9 +76,10 @@ func (s *service) List(ctx context.Context) ([]*Product, error) {
 	return prods, nil
 }
 
-func (s *service) Update(req UpdateProductRequest, ctx context.Context) error {
-	if err := s.Validator.Struct(req); err != nil {
-		return err
+func (s *service) Update(req *UpdateProductRequest, ctx context.Context) error {
+	if err := req.Validate(); err != nil {
+		log.Println(err.Error())
+		return &errors.ErrBadRequest{Err: err}
 	}
 
 	product, err := s.Repository.FindById(req.Id, ctx)
@@ -103,8 +112,8 @@ func (s *service) Update(req UpdateProductRequest, ctx context.Context) error {
 	return nil
 }
 
-func (s *service) Restock(req RestockProductRequest, ctx context.Context) error {
-	if err := s.Validator.Struct(req); err != nil {
+func (s *service) Restock(req *RestockProductRequest, ctx context.Context) error {
+	if err := req.Validate(); err != nil {
 		return err
 	}
 
@@ -154,7 +163,7 @@ func NewLoggingService(logger *slog.Logger, service Service) Service {
 	}
 }
 
-func (s *loggingService) Create(req CreateProductRequest, ctx context.Context) (*Product, error) {
+func (s *loggingService) Create(req *CreateProductRequest, ctx context.Context) (*Product, error) {
 	p, err := s.service.Create(req, ctx)
 	if err != nil {
 		if e, ok := err.(*errors.ErrInternal); ok {
@@ -203,7 +212,7 @@ func (s *loggingService) List(ctx context.Context) ([]*Product, error) {
 	return prods, nil
 }
 
-func (s *loggingService) Restock(req RestockProductRequest, ctx context.Context) error {
+func (s *loggingService) Restock(req *RestockProductRequest, ctx context.Context) error {
 	err := s.service.Restock(req, ctx)
 	if err != nil {
 		if e, ok := err.(*errors.ErrInternal); ok {
@@ -220,7 +229,7 @@ func (s *loggingService) Restock(req RestockProductRequest, ctx context.Context)
 	return nil
 }
 
-func (s *loggingService) Update(req UpdateProductRequest, ctx context.Context) error {
+func (s *loggingService) Update(req *UpdateProductRequest, ctx context.Context) error {
 	err := s.service.Update(req, ctx)
 	if err != nil {
 		if e, ok := err.(*errors.ErrInternal); ok {
