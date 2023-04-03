@@ -3,7 +3,6 @@ package kafka
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 
 	"github.com/giornetta/microshop/events"
@@ -62,10 +61,8 @@ func (l *Listener) Listen(ctx context.Context) error {
 			t := events.Type(record.Headers[0].Value)
 			event, _ := events.Decode(t, record.Value)
 
-			log.Printf("received new event: %v", event.Type())
-
+			// Events are handled sequentially, in a blocking manner, to ensure ordering.
 			if err := l.handleEvent(event, ctx); err != nil {
-				// Handle errors? Crash?
 				return err
 			}
 
