@@ -11,7 +11,7 @@ type productHandler struct {
 	repository CustomerRepository
 }
 
-func NewProductHandler(repository CustomerRepository) events.Handler {
+func NewCustomerHandler(repository CustomerRepository) events.Handler {
 	return &productHandler{
 		repository: repository,
 	}

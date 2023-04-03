@@ -13,7 +13,7 @@ type repository struct {
 	pool *pgxpool.Pool
 }
 
-func NewRepository(pool *pgxpool.Pool) customers.CustomerRepository {
+func NewCustomerRepository(pool *pgxpool.Pool) customers.CustomerRepository {
 	return &repository{
 		pool: pool,
 	}

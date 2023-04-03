@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"github.com/giornetta/microshop/config"
+	"github.com/giornetta/microshop/customers"
 	"github.com/giornetta/microshop/events"
 	"github.com/giornetta/microshop/kafka"
 	"github.com/giornetta/microshop/log"
 	"github.com/giornetta/microshop/postgres"
-	"github.com/giornetta/microshop/products"
 	"github.com/giornetta/microshop/server"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"golang.org/x/exp/slog"
 
-	"github.com/giornetta/microshop/products/pg"
+	"github.com/giornetta/microshop/customers/pg"
 )
 
 func main() {
@@ -54,20 +54,21 @@ func main() {
 	}
 	defer pgPool.Close()
 
-	productRepository := pg.NewProductRepository(pgPool)
+	customerRepository := pg.NewCustomerRepository(pgPool)
 
-	productHandler := log.NewEventHandler(
-		logger.With("svc", "ProductHandler"),
-		products.NewProductHandler(productRepository),
+	customersHandler := log.NewEventHandler(
+		logger.With("svc", "CustomerHandler"),
+		customers.NewCustomerHandler(customerRepository),
 	)
-	listener.Handle(events.ProductTopic, productHandler)
+	listener.Handle(events.CustomerTopic, customersHandler)
 
-	productService := products.NewLoggingService(
+	/*customerService := customers.NewLoggingService(
 		logger.With("svc", "Service"),
-		products.NewService(productRepository, producer),
-	)
+		customers.NewService(customerRepository, producer),
+	)*/
+	customerService := customers.NewService(customerRepository, producer)
 
-	s := server.New(products.NewRouter(productService), &server.Options{
+	s := server.New(customers.NewRouter(customerService), &server.Options{
 		Port:         cfg.Server.Port,
 		ReadTimeout:  time.Second * 5,
 		WriteTimeout: time.Second * 5,
