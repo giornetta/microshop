@@ -2,11 +2,11 @@ package products
 
 import (
 	"context"
-	"log"
 
 	"github.com/giornetta/microshop/events"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"golang.org/x/exp/slog"
 )
 
 type service struct {
@@ -43,18 +43,28 @@ func (s *service) Create(req CreateProductRequest, ctx context.Context) (*Produc
 		Price:        product.Price,
 		Amount:       product.Amount,
 	}, ctx); err != nil {
-		log.Println(err)
+		return nil, &ErrInternal{Err: err}
 	}
 
 	return product, nil
 }
 
 func (s *service) GetById(productId ProductId, ctx context.Context) (*Product, error) {
-	return s.Repository.FindById(productId, ctx)
+	p, err := s.Repository.FindById(productId, ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
 }
 
 func (s *service) List(ctx context.Context) ([]*Product, error) {
-	return s.Repository.List(ctx)
+	prods, err := s.Repository.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return prods, nil
 }
 
 func (s *service) Update(req UpdateProductRequest, ctx context.Context) error {
@@ -64,7 +74,7 @@ func (s *service) Update(req UpdateProductRequest, ctx context.Context) error {
 
 	product, err := s.Repository.FindById(req.Id, ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if req.Name != "" {
@@ -86,7 +96,7 @@ func (s *service) Update(req UpdateProductRequest, ctx context.Context) error {
 		Price:        product.Price,
 		Amount:       product.Amount,
 	}, ctx); err != nil {
-		return err
+		return &ErrInternal{Err: err}
 	}
 
 	return nil
@@ -99,7 +109,7 @@ func (s *service) Restock(req RestockProductRequest, ctx context.Context) error 
 
 	product, err := s.Repository.FindById(req.Id, ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	product.UpdateStock(req.Amount)
@@ -111,7 +121,7 @@ func (s *service) Restock(req RestockProductRequest, ctx context.Context) error 
 		Price:        product.Price,
 		Amount:       product.Amount,
 	}, ctx); err != nil {
-		return nil
+		return &ErrInternal{Err: err}
 	}
 
 	return nil
@@ -125,6 +135,118 @@ func (s *service) Delete(productId ProductId, ctx context.Context) error {
 	if err := s.Producer.Publish(events.ProductDeleted{
 		ProductEvent: events.ProductEvent{ProductId: productId.String()},
 	}, ctx); err != nil {
+		return &ErrInternal{Err: err}
+	}
+
+	return nil
+}
+
+type loggingService struct {
+	service Service
+	logger  *slog.Logger
+}
+
+func NewLoggingService(logger *slog.Logger, service Service) Service {
+	return &loggingService{
+		service: service,
+		logger:  logger,
+	}
+}
+
+func (s *loggingService) Create(req CreateProductRequest, ctx context.Context) (*Product, error) {
+	p, err := s.service.Create(req, ctx)
+	if err != nil {
+		if e, ok := err.(*ErrInternal); ok {
+			s.logger.Error("could not create product",
+				slog.String("method", "Create"),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (s *loggingService) GetById(productId ProductId, ctx context.Context) (*Product, error) {
+	p, err := s.service.GetById(productId, ctx)
+	if err != nil {
+		if e, ok := err.(*ErrInternal); ok {
+			s.logger.Error("could not find product by id",
+				slog.String("method", "GetById"),
+				slog.String("product_id", productId.String()),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (s *loggingService) List(ctx context.Context) ([]*Product, error) {
+	prods, err := s.service.List(ctx)
+	if err != nil {
+		if e, ok := err.(*ErrInternal); ok {
+			s.logger.Error("could not list products",
+				slog.String("method", "List"),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return nil, err
+	}
+
+	return prods, nil
+}
+
+func (s *loggingService) Restock(req RestockProductRequest, ctx context.Context) error {
+	err := s.service.Restock(req, ctx)
+	if err != nil {
+		if e, ok := err.(*ErrInternal); ok {
+			s.logger.Error("could not restock product",
+				slog.String("method", "Restock"),
+				slog.String("product_id", req.Id.String()),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *loggingService) Update(req UpdateProductRequest, ctx context.Context) error {
+	err := s.service.Update(req, ctx)
+	if err != nil {
+		if e, ok := err.(*ErrInternal); ok {
+			s.logger.Error("could not update product",
+				slog.String("method", "Update"),
+				slog.String("product_id", req.Id.String()),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *loggingService) Delete(productId ProductId, ctx context.Context) error {
+	err := s.service.Delete(productId, ctx)
+	if err != nil {
+		if e, ok := err.(*ErrInternal); ok {
+			s.logger.Error("could not delete product",
+				slog.String("method", "Delete"),
+				slog.String("product_id", productId.String()),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
 		return err
 	}
 

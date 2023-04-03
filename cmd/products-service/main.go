@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -15,15 +15,19 @@ import (
 	"github.com/giornetta/microshop/products"
 	"github.com/giornetta/microshop/server"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"golang.org/x/exp/slog"
 
-	"github.com/giornetta/microshop/products/http"
 	"github.com/giornetta/microshop/products/pg"
+	"github.com/giornetta/microshop/products/router"
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stderr))
+
 	cfg, err := config.FromYaml("./config.yml")
 	if err != nil {
-		log.Fatalf("could not load config: %v", err)
+		logger.Error("could not load yaml config", slog.String("err", err.Error()))
+		os.Exit(1)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -35,7 +39,8 @@ func main() {
 		kgo.AllowAutoTopicCreation(),
 	)
 	if err != nil {
-		log.Fatalf("could not create kafka client: %v", err)
+		logger.Error("could not create kafka client", slog.String("err", err.Error()))
+		os.Exit(1)
 	}
 	defer client.Close()
 
@@ -45,18 +50,24 @@ func main() {
 	// Setup Postgres
 	pgPool, err := postgres.Connect(ctx, cfg.Postgres.ConnectionString())
 	if err != nil {
-		log.Fatalf("could not connect to postgres: %v", err)
+		logger.Error("could not connect to postgres", slog.String("err", err.Error()))
 	}
 	defer pgPool.Close()
 
 	productRepository := pg.NewProductRepository(pgPool)
 
-	productHandler := products.NewProductHandler(productRepository)
+	productHandler := products.NewLoggingEventHandler(
+		logger.With("svc", "ProductHandler"),
+		products.NewProductHandler(productRepository),
+	)
 	listener.Handle(events.ProductTopic, productHandler)
 
-	productService := products.NewService(productRepository, producer)
+	productService := products.NewLoggingService(
+		logger.With("svc", "Service"),
+		products.NewService(productRepository, producer),
+	)
 
-	s := server.New(http.Router(productService), &server.Options{
+	s := server.New(router.New(productService), &server.Options{
 		Port:         cfg.Server.Port,
 		ReadTimeout:  time.Second * 5,
 		WriteTimeout: time.Second * 5,
@@ -72,7 +83,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		if err := listener.Listen(ctx); err != nil {
-			log.Println(err)
+			logger.Error("could not listen to events", slog.String("err", err.Error()))
 			signals <- os.Interrupt
 		}
 
@@ -81,15 +92,16 @@ func main() {
 
 	wg.Add(1)
 	go func() {
-		log.Printf("Listening on port %d\n", cfg.Server.Port)
-		if err := s.ListenAndServe(); err != nil {
-			log.Println(err)
+		logger.Info("Server started", slog.Int("port", cfg.Server.Port))
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("could not run server", slog.String("err", err.Error()))
 		}
 
 		wg.Done()
 	}()
 
 	<-signals
+	logger.Info("Shutting down server...")
 	cancel()
 	s.Shutdown(ctx)
 

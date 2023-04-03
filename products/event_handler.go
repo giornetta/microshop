@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/giornetta/microshop/events"
+	"golang.org/x/exp/slog"
 )
 
 type productHandler struct {
@@ -17,17 +18,21 @@ func NewProductHandler(repository ProductRepository) events.Handler {
 	}
 }
 
-func (h *productHandler) Handle(e events.Event, ctx context.Context) error {
-	switch e.Type() {
+func (h *productHandler) Handle(evt events.Event, ctx context.Context) error {
+	var err error
+
+	switch evt.Type() {
 	case events.ProductCreatedType:
-		return h.handleCreated(e.(events.ProductCreated), ctx)
+		err = h.handleCreated(evt.(events.ProductCreated), ctx)
 	case events.ProductUpdatedType:
-		return h.handleUpdated(e.(events.ProductUpdated), ctx)
+		err = h.handleUpdated(evt.(events.ProductUpdated), ctx)
 	case events.ProductDeletedType:
-		return h.handleDeleted(e.(events.ProductDeleted), ctx)
+		err = h.handleDeleted(evt.(events.ProductDeleted), ctx)
 	default:
-		return fmt.Errorf("unknown event type: %v", e.Type())
+		err = fmt.Errorf("unknown event type: %v", evt.Type())
 	}
+
+	return err
 }
 
 func (h *productHandler) handleCreated(evt events.ProductCreated, ctx context.Context) error {
@@ -64,6 +69,32 @@ func (h *productHandler) handleUpdated(evt events.ProductUpdated, ctx context.Co
 
 func (h *productHandler) handleDeleted(evt events.ProductDeleted, ctx context.Context) error {
 	if err := h.repository.Delete(ProductId(evt.ProductId), ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type loggingHandler struct {
+	handler events.Handler
+	logger  *slog.Logger
+}
+
+func NewLoggingEventHandler(logger *slog.Logger, handler events.Handler) events.Handler {
+	return &loggingHandler{
+		handler: handler,
+		logger:  logger,
+	}
+}
+
+func (h *loggingHandler) Handle(evt events.Event, ctx context.Context) error {
+	if err := h.handler.Handle(evt, ctx); err != nil {
+		if e, ok := err.(*ErrInternal); ok {
+			h.logger.Error("could not handle event",
+				slog.String("type", evt.Type().String()),
+				slog.String("err", e.Cause().Error()))
+		}
+
 		return err
 	}
 

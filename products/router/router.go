@@ -1,4 +1,4 @@
-package http
+package router
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type handler struct {
 	Service products.Service
 }
 
-func Router(service products.Service) http.Handler {
+func New(service products.Service) http.Handler {
 	h := &handler{
 		Service: service,
 	}
