@@ -1,6 +1,12 @@
 package customers
 
-import "context"
+import (
+	"context"
+	"strings"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
+)
 
 type CustomerId string
 
@@ -25,6 +31,14 @@ type ShippingAddress struct {
 	Street  string `json:"street"`
 }
 
+type CustomerRepository interface {
+	Store(customer *Customer, ctx context.Context) error
+	FindById(id CustomerId, ctx context.Context) (*Customer, error)
+	FindByEmail(email string, ctx context.Context) (*Customer, error)
+	Update(customer *Customer, ctx context.Context) error
+	Delete(id CustomerId, ctx context.Context) error
+}
+
 type Service interface {
 	Create(req *CreateCustomerRequest, ctx context.Context) error
 	GetById(customerId CustomerId, ctx context.Context) (*Customer, error)
@@ -38,6 +52,25 @@ type CreateCustomerRequest struct {
 	Email     string
 }
 
+func (r *CreateCustomerRequest) Validate() error {
+	return validation.ValidateStruct(r,
+		validation.Field(&r.FirstName,
+			validation.Required,
+			validation.Length(2, 10),
+			is.Alpha,
+		),
+		validation.Field(&r.LastName,
+			validation.Required,
+			validation.Length(2, 10),
+			is.Alpha,
+		),
+		validation.Field(&r.Email,
+			validation.Required,
+			is.EmailFormat,
+		),
+	)
+}
+
 type UpdateShippingAddressRequest struct {
 	Country string
 	City    string
@@ -45,10 +78,30 @@ type UpdateShippingAddressRequest struct {
 	Street  string
 }
 
-type CustomerRepository interface {
-	Store(customer *Customer, ctx context.Context) error
-	FindById(id CustomerId, ctx context.Context) (*Customer, error)
-	FindByEmail(email string, ctx context.Context) (*Customer, error)
-	Update(customer *Customer, ctx context.Context) error
-	Delete(id CustomerId, ctx context.Context) error
+func (r *UpdateShippingAddressRequest) Validate() error {
+	r.Country = strings.TrimSpace(r.Country)
+	r.City = strings.TrimSpace(r.City)
+	r.Street = strings.TrimSpace(r.Street)
+
+	return validation.ValidateStruct(r,
+		validation.Field(&r.Country,
+			validation.Required,
+			validation.Length(4, 12),
+			is.ASCII,
+		),
+		validation.Field(&r.City,
+			validation.Required,
+			validation.Length(4, 12),
+			is.Alpha,
+		),
+		validation.Field(&r.ZipCode,
+			validation.Required,
+			is.Int,
+		),
+		validation.Field(&r.Street,
+			validation.Required,
+			validation.Length(6, 32),
+			is.ASCII,
+		),
+	)
 }

@@ -2,6 +2,7 @@ package products
 
 import (
 	"context"
+	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
@@ -29,6 +30,15 @@ func (p *Product) UpdateStock(amountDelta int) {
 	}
 }
 
+type ProductRepository interface {
+	Store(product *Product, ctx context.Context) error
+	FindById(id ProductId, ctx context.Context) (*Product, error)
+	FindByName(name string, ctx context.Context) (*Product, error)
+	List(ctx context.Context) ([]*Product, error)
+	Update(product *Product, ctx context.Context) error
+	Delete(id ProductId, ctx context.Context) error
+}
+
 type Service interface {
 	Create(req *CreateProductRequest, ctx context.Context) (*Product, error)
 	GetById(productId ProductId, ctx context.Context) (*Product, error)
@@ -46,6 +56,9 @@ type CreateProductRequest struct {
 }
 
 func (r *CreateProductRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+
 	return validation.ValidateStruct(r,
 		validation.Field(&r.Name,
 			validation.Required,
@@ -75,6 +88,9 @@ type UpdateProductRequest struct {
 }
 
 func (r *UpdateProductRequest) Validate() error {
+	r.Name = strings.TrimSpace(r.Name)
+	r.Description = strings.TrimSpace(r.Description)
+
 	return validation.ValidateStruct(r,
 		validation.Field(&r.Id,
 			validation.Required,
@@ -111,13 +127,4 @@ func (r *RestockProductRequest) Validate() error {
 			validation.Min(0).Exclusive(),
 		),
 	)
-}
-
-type ProductRepository interface {
-	Store(product *Product, ctx context.Context) error
-	FindById(id ProductId, ctx context.Context) (*Product, error)
-	FindByName(name string, ctx context.Context) (*Product, error)
-	List(ctx context.Context) ([]*Product, error)
-	Update(product *Product, ctx context.Context) error
-	Delete(id ProductId, ctx context.Context) error
 }
