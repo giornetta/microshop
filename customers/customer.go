@@ -21,7 +21,7 @@ type Customer struct {
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
 
-	ShippingAddress *ShippingAddress `json:"shipping_address"`
+	ShippingAddress *ShippingAddress `json:"shipping_address,omitempty"`
 }
 
 type ShippingAddress struct {
@@ -31,16 +31,24 @@ type ShippingAddress struct {
 	Street  string `json:"street"`
 }
 
-type CustomerRepository interface {
-	Store(customer *Customer, ctx context.Context) error
+type CustomerQuerier interface {
 	FindById(id CustomerId, ctx context.Context) (*Customer, error)
 	FindByEmail(email string, ctx context.Context) (*Customer, error)
+}
+
+type CustomerStorer interface {
+	Store(customer *Customer, ctx context.Context) error
 	UpdateShippingAddress(id CustomerId, addr *ShippingAddress, ctx context.Context) error
 	Delete(id CustomerId, ctx context.Context) error
 }
 
+type CustomerRepository interface {
+	CustomerQuerier
+	CustomerStorer
+}
+
 type Service interface {
-	Create(req *CreateCustomerRequest, ctx context.Context) error
+	Create(req *CreateCustomerRequest, ctx context.Context) (*Customer, error)
 	GetById(customerId CustomerId, ctx context.Context) (*Customer, error)
 	UpdateShippingAddress(req *UpdateShippingAddressRequest, ctx context.Context) error
 	Delete(customerId CustomerId, ctx context.Context) error
@@ -72,6 +80,8 @@ func (r *CreateCustomerRequest) Validate() error {
 }
 
 type UpdateShippingAddressRequest struct {
+	Id CustomerId
+
 	Country string
 	City    string
 	ZipCode string

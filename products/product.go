@@ -30,13 +30,21 @@ func (p *Product) UpdateStock(amountDelta int) {
 	}
 }
 
-type ProductRepository interface {
-	Store(product *Product, ctx context.Context) error
+type ProductQuerier interface {
 	FindById(id ProductId, ctx context.Context) (*Product, error)
 	FindByName(name string, ctx context.Context) (*Product, error)
 	List(ctx context.Context) ([]*Product, error)
+}
+
+type ProductStorer interface {
+	Store(product *Product, ctx context.Context) error
 	Update(product *Product, ctx context.Context) error
 	Delete(id ProductId, ctx context.Context) error
+}
+
+type ProductRepository interface {
+	ProductQuerier
+	ProductStorer
 }
 
 type Service interface {

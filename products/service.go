@@ -2,7 +2,6 @@ package products
 
 import (
 	"context"
-	"log"
 
 	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/events"
@@ -11,14 +10,14 @@ import (
 )
 
 type service struct {
-	Repository ProductRepository
-	Producer   events.Publisher
+	querier   ProductQuerier
+	publisher events.Publisher
 }
 
-func NewService(repository ProductRepository, producer events.Publisher) Service {
+func NewService(querier ProductQuerier, publisher events.Publisher) Service {
 	return &service{
-		Repository: repository,
-		Producer:   producer,
+		querier:   querier,
+		publisher: publisher,
 	}
 }
 
@@ -27,7 +26,7 @@ func (s *service) Create(req *CreateProductRequest, ctx context.Context) (*Produ
 		return nil, err
 	}
 
-	_, err := s.Repository.FindByName(req.Name, ctx)
+	_, err := s.querier.FindByName(req.Name, ctx)
 	if err == nil {
 		return nil, &ErrAlreadyExists{Name: req.Name}
 	}
@@ -45,7 +44,7 @@ func (s *service) Create(req *CreateProductRequest, ctx context.Context) (*Produ
 		Amount:      req.Amount,
 	}
 
-	if err := s.Producer.Publish(events.ProductCreated{
+	if err := s.publisher.Publish(events.ProductCreated{
 		ProductEvent: events.ProductEvent{ProductId: product.Id.String()},
 		Name:         product.Name,
 		Description:  product.Description,
@@ -59,7 +58,7 @@ func (s *service) Create(req *CreateProductRequest, ctx context.Context) (*Produ
 }
 
 func (s *service) GetById(productId ProductId, ctx context.Context) (*Product, error) {
-	p, err := s.Repository.FindById(productId, ctx)
+	p, err := s.querier.FindById(productId, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,7 @@ func (s *service) GetById(productId ProductId, ctx context.Context) (*Product, e
 }
 
 func (s *service) List(ctx context.Context) ([]*Product, error) {
-	prods, err := s.Repository.List(ctx)
+	prods, err := s.querier.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -78,11 +77,10 @@ func (s *service) List(ctx context.Context) ([]*Product, error) {
 
 func (s *service) Update(req *UpdateProductRequest, ctx context.Context) error {
 	if err := req.Validate(); err != nil {
-		log.Println(err.Error())
 		return &errors.ErrBadRequest{Err: err}
 	}
 
-	product, err := s.Repository.FindById(req.Id, ctx)
+	product, err := s.querier.FindById(req.Id, ctx)
 	if err != nil {
 		return err
 	}
@@ -99,7 +97,7 @@ func (s *service) Update(req *UpdateProductRequest, ctx context.Context) error {
 		product.Price = req.Price
 	}
 
-	if err := s.Producer.Publish(events.ProductUpdated{
+	if err := s.publisher.Publish(events.ProductUpdated{
 		ProductEvent: events.ProductEvent{ProductId: product.Id.String()},
 		Name:         product.Name,
 		Description:  product.Description,
@@ -117,14 +115,14 @@ func (s *service) Restock(req *RestockProductRequest, ctx context.Context) error
 		return err
 	}
 
-	product, err := s.Repository.FindById(req.Id, ctx)
+	product, err := s.querier.FindById(req.Id, ctx)
 	if err != nil {
 		return err
 	}
 
 	product.UpdateStock(req.Amount)
 
-	if err := s.Producer.Publish(events.ProductUpdated{
+	if err := s.publisher.Publish(events.ProductUpdated{
 		ProductEvent: events.ProductEvent{ProductId: product.Id.String()},
 		Name:         product.Name,
 		Description:  product.Description,
@@ -138,11 +136,11 @@ func (s *service) Restock(req *RestockProductRequest, ctx context.Context) error
 }
 
 func (s *service) Delete(productId ProductId, ctx context.Context) error {
-	if _, err := s.Repository.FindById(productId, ctx); err != nil {
+	if _, err := s.querier.FindById(productId, ctx); err != nil {
 		return err
 	}
 
-	if err := s.Producer.Publish(events.ProductDeleted{
+	if err := s.publisher.Publish(events.ProductDeleted{
 		ProductEvent: events.ProductEvent{ProductId: productId.String()},
 	}, ctx); err != nil {
 		return &errors.ErrInternal{Err: err}
