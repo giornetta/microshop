@@ -11,6 +11,7 @@ import (
 	"github.com/giornetta/microshop/config"
 	"github.com/giornetta/microshop/events"
 	"github.com/giornetta/microshop/kafka"
+	"github.com/giornetta/microshop/log"
 	"github.com/giornetta/microshop/postgres"
 	"github.com/giornetta/microshop/products"
 	"github.com/giornetta/microshop/server"
@@ -56,7 +57,7 @@ func main() {
 
 	productRepository := pg.NewProductRepository(pgPool)
 
-	productHandler := products.NewLoggingEventHandler(
+	productHandler := log.NewEventHandler(
 		logger.With("svc", "ProductHandler"),
 		products.NewProductHandler(productRepository),
 	)

@@ -23,10 +23,9 @@ func (r *repository) Store(c *customers.Customer, ctx context.Context) error {
 	if _, err := r.pool.Exec(
 		ctx,
 		`INSERT INTO
-		customers(customer_id, first_name, last_name, email, shipping_country, shipping_city, shipping_zipcode, shipping_street)
-		VALUES($1, $2, $3, $4, $5, $6, $7, $8);`,
+		customers(customer_id, first_name, last_name, email)
+		VALUES($1, $2, $3, $4);`,
 		c.Id, c.FirstName, c.LastName, c.Email,
-		c.ShippingAddress.Country, c.ShippingAddress.City, c.ShippingAddress.ZipCode, c.ShippingAddress.ZipCode,
 	); err != nil {
 		return err
 	}
@@ -78,13 +77,13 @@ func (r *repository) FindById(id customers.CustomerId, ctx context.Context) (*cu
 	return &c, nil
 }
 
-func (r *repository) Update(c *customers.Customer, ctx context.Context) error {
+func (r *repository) UpdateShippingAddress(id customers.CustomerId, addr *customers.ShippingAddress, ctx context.Context) error {
 	if _, err := r.pool.Exec(
 		ctx,
 		`UPDATE customers
 		SET shipping_country = $1, shipping_city = $2, shipping_zipcode = $3, shipping_street = $4
 		WHERE customer_id = $5;`,
-		c.ShippingAddress.Country, c.ShippingAddress.City, c.ShippingAddress.ZipCode, c.ShippingAddress.Street, c.Id,
+		addr.Country, addr.City, addr.ZipCode, addr.Street, id,
 	); err != nil {
 		return err
 	}

@@ -35,7 +35,7 @@ type CustomerRepository interface {
 	Store(customer *Customer, ctx context.Context) error
 	FindById(id CustomerId, ctx context.Context) (*Customer, error)
 	FindByEmail(email string, ctx context.Context) (*Customer, error)
-	Update(customer *Customer, ctx context.Context) error
+	UpdateShippingAddress(id CustomerId, addr *ShippingAddress, ctx context.Context) error
 	Delete(id CustomerId, ctx context.Context) error
 }
 
