@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"errors"
 	"log"
 	"sync"
 
@@ -12,8 +13,6 @@ import (
 // Listener fetches incoming Kafka messages, offering a simple API to specify handlers for them.
 type Listener struct {
 	client *kgo.Client
-
-	wg sync.WaitGroup
 
 	lock     sync.RWMutex
 	handlers map[events.Topic]events.Handler
@@ -49,7 +48,6 @@ func (l *Listener) Listen(ctx context.Context) error {
 	for {
 		fetches := l.client.PollFetches(ctx)
 		if errs := fetches.Errors(); errs != nil {
-			l.wg.Wait()
 			if errs[0].Err == context.Canceled {
 				return nil
 			}
@@ -64,30 +62,30 @@ func (l *Listener) Listen(ctx context.Context) error {
 			t := events.Type(record.Headers[0].Value)
 			event, _ := events.Decode(t, record.Value)
 
-			l.wg.Add(1)
-			go l.handleEvent(event, ctx)
+			log.Printf("received new event: %v", event.Type())
+
+			if err := l.handleEvent(event, ctx); err != nil {
+				// Handle errors? Crash?
+				return err
+			}
+
+			l.client.CommitRecords(ctx, record)
 		}
 	}
-
 }
 
-func (l *Listener) handleEvent(e events.Event, ctx context.Context) {
+func (l *Listener) handleEvent(evt events.Event, ctx context.Context) error {
 	l.lock.RLock()
 	defer l.lock.RUnlock()
 
-	handler, ok := l.handlers[e.Topic()]
+	handler, ok := l.handlers[evt.Topic()]
 	if !ok {
-		return
+		return errors.New("couldn't find handler")
 	}
 
-	l.wg.Add(1)
-	go func(h events.Handler) {
-		if err := h.Handle(e, ctx); err != nil {
-			// TODO Do some error Handling
-			log.Println(err)
-		}
-		l.wg.Done()
-	}(handler)
+	if err := handler.Handle(evt, ctx); err != nil {
+		return err
+	}
 
-	l.wg.Done()
+	return nil
 }

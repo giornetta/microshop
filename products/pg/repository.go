@@ -84,12 +84,20 @@ func (r *repository) Store(product *products.Product, ctx context.Context) error
 	return nil
 }
 
-func (*repository) Update(product *products.Product, ctx context.Context) error {
-	panic("unimplemented")
+func (r *repository) Update(product *products.Product, ctx context.Context) error {
+	if _, err := r.pool.Exec(
+		ctx,
+		"UPDATE products SET name = $1, description = $2, price = $3, amount = $4 WHERE product_id = $5",
+		product.Name, product.Description, product.Price, product.Amount, product.Id,
+	); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *repository) Delete(id products.ProductId, ctx context.Context) error {
-	if _, err := r.pool.Exec(context.Background(), "DELETE FROM products WHERE product_id = $1;", id); err != nil {
+	if _, err := r.pool.Exec(ctx, "DELETE FROM products WHERE product_id = $1;", id); err != nil {
 		return err
 	}
 
