@@ -3,6 +3,7 @@ package products
 import (
 	"context"
 
+	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/events"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -43,7 +44,7 @@ func (s *service) Create(req CreateProductRequest, ctx context.Context) (*Produc
 		Price:        product.Price,
 		Amount:       product.Amount,
 	}, ctx); err != nil {
-		return nil, &ErrInternal{Err: err}
+		return nil, &errors.ErrInternal{Err: err}
 	}
 
 	return product, nil
@@ -96,7 +97,7 @@ func (s *service) Update(req UpdateProductRequest, ctx context.Context) error {
 		Price:        product.Price,
 		Amount:       product.Amount,
 	}, ctx); err != nil {
-		return &ErrInternal{Err: err}
+		return &errors.ErrInternal{Err: err}
 	}
 
 	return nil
@@ -121,7 +122,7 @@ func (s *service) Restock(req RestockProductRequest, ctx context.Context) error 
 		Price:        product.Price,
 		Amount:       product.Amount,
 	}, ctx); err != nil {
-		return &ErrInternal{Err: err}
+		return &errors.ErrInternal{Err: err}
 	}
 
 	return nil
@@ -135,7 +136,7 @@ func (s *service) Delete(productId ProductId, ctx context.Context) error {
 	if err := s.Producer.Publish(events.ProductDeleted{
 		ProductEvent: events.ProductEvent{ProductId: productId.String()},
 	}, ctx); err != nil {
-		return &ErrInternal{Err: err}
+		return &errors.ErrInternal{Err: err}
 	}
 
 	return nil
@@ -156,7 +157,7 @@ func NewLoggingService(logger *slog.Logger, service Service) Service {
 func (s *loggingService) Create(req CreateProductRequest, ctx context.Context) (*Product, error) {
 	p, err := s.service.Create(req, ctx)
 	if err != nil {
-		if e, ok := err.(*ErrInternal); ok {
+		if e, ok := err.(*errors.ErrInternal); ok {
 			s.logger.Error("could not create product",
 				slog.String("method", "Create"),
 				slog.String("err", e.Cause().Error()),
@@ -172,7 +173,7 @@ func (s *loggingService) Create(req CreateProductRequest, ctx context.Context) (
 func (s *loggingService) GetById(productId ProductId, ctx context.Context) (*Product, error) {
 	p, err := s.service.GetById(productId, ctx)
 	if err != nil {
-		if e, ok := err.(*ErrInternal); ok {
+		if e, ok := err.(*errors.ErrInternal); ok {
 			s.logger.Error("could not find product by id",
 				slog.String("method", "GetById"),
 				slog.String("product_id", productId.String()),
@@ -189,7 +190,7 @@ func (s *loggingService) GetById(productId ProductId, ctx context.Context) (*Pro
 func (s *loggingService) List(ctx context.Context) ([]*Product, error) {
 	prods, err := s.service.List(ctx)
 	if err != nil {
-		if e, ok := err.(*ErrInternal); ok {
+		if e, ok := err.(*errors.ErrInternal); ok {
 			s.logger.Error("could not list products",
 				slog.String("method", "List"),
 				slog.String("err", e.Cause().Error()),
@@ -205,7 +206,7 @@ func (s *loggingService) List(ctx context.Context) ([]*Product, error) {
 func (s *loggingService) Restock(req RestockProductRequest, ctx context.Context) error {
 	err := s.service.Restock(req, ctx)
 	if err != nil {
-		if e, ok := err.(*ErrInternal); ok {
+		if e, ok := err.(*errors.ErrInternal); ok {
 			s.logger.Error("could not restock product",
 				slog.String("method", "Restock"),
 				slog.String("product_id", req.Id.String()),
@@ -222,7 +223,7 @@ func (s *loggingService) Restock(req RestockProductRequest, ctx context.Context)
 func (s *loggingService) Update(req UpdateProductRequest, ctx context.Context) error {
 	err := s.service.Update(req, ctx)
 	if err != nil {
-		if e, ok := err.(*ErrInternal); ok {
+		if e, ok := err.(*errors.ErrInternal); ok {
 			s.logger.Error("could not update product",
 				slog.String("method", "Update"),
 				slog.String("product_id", req.Id.String()),
@@ -239,7 +240,7 @@ func (s *loggingService) Update(req UpdateProductRequest, ctx context.Context) e
 func (s *loggingService) Delete(productId ProductId, ctx context.Context) error {
 	err := s.service.Delete(productId, ctx)
 	if err != nil {
-		if e, ok := err.(*ErrInternal); ok {
+		if e, ok := err.(*errors.ErrInternal); ok {
 			s.logger.Error("could not delete product",
 				slog.String("method", "Delete"),
 				slog.String("product_id", productId.String()),

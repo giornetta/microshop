@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/events"
 	"golang.org/x/exp/slog"
 )
@@ -89,7 +90,7 @@ func NewLoggingEventHandler(logger *slog.Logger, handler events.Handler) events.
 
 func (h *loggingHandler) Handle(evt events.Event, ctx context.Context) error {
 	if err := h.handler.Handle(evt, ctx); err != nil {
-		if e, ok := err.(*ErrInternal); ok {
+		if e, ok := err.(*errors.ErrInternal); ok {
 			h.logger.Error("could not handle event",
 				slog.String("type", evt.Type().String()),
 				slog.String("err", e.Cause().Error()))

@@ -2,19 +2,8 @@ package products
 
 import (
 	"fmt"
+	"net/http"
 )
-
-type ErrInternal struct {
-	Err error
-}
-
-func (e *ErrInternal) Error() string {
-	return "Internal Server Error"
-}
-
-func (e *ErrInternal) Cause() error {
-	return e.Err
-}
 
 type ErrNotFound struct {
 	ProductId ProductId
@@ -31,4 +20,8 @@ func (err *ErrNotFound) Error() string {
 	}
 
 	return "product was not found"
+}
+
+func (err *ErrNotFound) StatusCode() int {
+	return http.StatusNotFound
 }

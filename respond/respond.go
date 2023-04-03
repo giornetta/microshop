@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+
+	"github.com/giornetta/microshop/errors"
 )
 
-// JSON serializes the given data as JSON and sends it as a http Response
+// JSON serializes the given data as JSON and sends it as a HTTP Response
 func JSON(w http.ResponseWriter, status int, v interface{}) {
 	buf := &bytes.Buffer{}
 	if err := json.NewEncoder(buf).Encode(v); err != nil {
-		Err(w, http.StatusInternalServerError, err)
+		Err(w, err)
 		return
 	}
 
@@ -19,8 +21,20 @@ func JSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Write(buf.Bytes())
 }
 
-func Err(w http.ResponseWriter, status int, err error) {
+// Err serializes the given error as JSON and sends it as a HTTP Response,
+// choosing the appropriate status code.
+func Err(w http.ResponseWriter, err error) {
+	var status int = http.StatusInternalServerError
+	var msg string
+
+	if e, ok := err.(errors.WithStatusCode); ok {
+		status = e.StatusCode()
+		msg = e.Error()
+	} else {
+		msg = new(errors.ErrInternal).Error()
+	}
+
 	JSON(w, status, map[string]string{
-		"error": err.Error(),
+		"error": msg,
 	})
 }

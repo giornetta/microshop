@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 
+	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/products"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,7 +29,7 @@ func (r *repository) FindById(id products.ProductId, ctx context.Context) (*prod
 			return nil, &products.ErrNotFound{ProductId: id}
 		}
 
-		return nil, &products.ErrInternal{Err: err}
+		return nil, &errors.ErrInternal{Err: err}
 	}
 
 	return &product, nil
@@ -44,7 +45,7 @@ func (r *repository) FindByName(name string, ctx context.Context) (*products.Pro
 			return nil, &products.ErrNotFound{Name: name}
 		}
 
-		return nil, &products.ErrInternal{Err: err}
+		return nil, &errors.ErrInternal{Err: err}
 	}
 
 	return &product, nil
@@ -55,14 +56,14 @@ func (r *repository) List(ctx context.Context) ([]*products.Product, error) {
 
 	rows, err := r.pool.Query(ctx, "SELECT product_id, name, description, price, amount FROM products")
 	if err != nil && err != pgx.ErrNoRows {
-		return nil, &products.ErrInternal{Err: err}
+		return nil, &errors.ErrInternal{Err: err}
 	}
 
 	for rows.Next() {
 		var p products.Product
 
 		if err := rows.Scan(&p.Id, &p.Name, &p.Description, &p.Price, &p.Amount); err != nil {
-			return nil, &products.ErrInternal{Err: err}
+			return nil, &errors.ErrInternal{Err: err}
 		}
 
 		prods = append(prods, &p)

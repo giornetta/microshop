@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/respond"
 
 	"github.com/giornetta/microshop/products"
@@ -32,6 +33,7 @@ func New(service products.Service) http.Handler {
 		r.Get("/", h.handleListProducts)
 		r.Get("/{id}", h.handleGetProduct)
 		r.Put("/{id}", h.handleUpdateProduct)
+		r.Put("/restock/{id}", h.handleRestockProduct)
 		r.Delete("/{id}", h.handleDeleteProduct)
 	})
 
@@ -49,7 +51,7 @@ func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 	var req createProductRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.Err(w, http.StatusBadRequest, err)
+		respond.Err(w, &errors.ErrBadRequest{})
 		return
 	}
 
@@ -60,7 +62,7 @@ func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 		InitialAmount: req.InitialAmount,
 	}, r.Context())
 	if err != nil {
-		respond.Err(w, http.StatusInternalServerError, err)
+		respond.Err(w, err)
 		return
 	}
 
@@ -70,7 +72,7 @@ func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 func (h *handler) handleListProducts(w http.ResponseWriter, r *http.Request) {
 	products, err := h.Service.List(r.Context())
 	if err != nil {
-		respond.Err(w, http.StatusInternalServerError, err)
+		respond.Err(w, err)
 		return
 	}
 
@@ -82,7 +84,7 @@ func (h *handler) handleGetProduct(w http.ResponseWriter, r *http.Request) {
 
 	product, err := h.Service.GetById(products.ProductId(productId), r.Context())
 	if err != nil {
-		respond.Err(w, http.StatusNotFound, err)
+		respond.Err(w, err)
 		return
 	}
 
@@ -100,7 +102,7 @@ func (h *handler) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 	var req updateProductRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respond.Err(w, http.StatusBadRequest, err)
+		respond.Err(w, &errors.ErrBadRequest{})
 		return
 	}
 
@@ -110,18 +112,41 @@ func (h *handler) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 		Price:       req.Price,
 	}, r.Context()); err != nil {
-		respond.Err(w, http.StatusInternalServerError, err)
+		respond.Err(w, err)
 		return
 	}
 
 	respond.JSON(w, http.StatusOK, nil)
 }
 
+type restockProductRequest struct {
+	Amount uint `json:"amount"`
+}
+
+func (h *handler) handleRestockProduct(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var req restockProductRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Err(w, &errors.ErrBadRequest{})
+		return
+	}
+
+	if err := h.Service.Restock(products.RestockProductRequest{
+		Id:     products.ProductId(id),
+		Amount: int(req.Amount),
+	}, r.Context()); err != nil {
+		respond.Err(w, err)
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, nil)
+}
 func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
 	productId := chi.URLParam(r, "id")
 
 	if err := h.Service.Delete(products.ProductId(productId), r.Context()); err != nil {
-		respond.Err(w, http.StatusNotFound, err)
+		respond.Err(w, err)
 		return
 	}
 
