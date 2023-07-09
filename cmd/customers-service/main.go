@@ -51,6 +51,7 @@ func main() {
 	pgPool, err := postgres.Connect(ctx, cfg.Postgres.ConnectionString())
 	if err != nil {
 		logger.Error("could not connect to postgres", slog.String("err", err.Error()))
+		os.Exit(1)
 	}
 	defer pgPool.Close()
 
