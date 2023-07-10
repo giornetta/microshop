@@ -63,11 +63,10 @@ func main() {
 	)
 	listener.Handle(events.CustomerTopic, customersHandler)
 
-	/*customerService := customers.NewLoggingService(
+	customerService := customers.NewLoggingService(
 		logger.With("svc", "Service"),
 		customers.NewService(customerRepository, producer),
-	)*/
-	customerService := customers.NewService(customerRepository, producer)
+	)
 
 	s := server.New(customers.NewRouter(customerService), &server.Options{
 		Port:         cfg.Server.Port,

@@ -59,7 +59,10 @@ func (l *Listener) Listen(ctx context.Context) error {
 			record := iter.Next()
 
 			t := events.Type(record.Headers[0].Value)
-			event, _ := events.Decode(t, record.Value)
+			event, err := events.Decode(t, record.Value)
+			if err != nil {
+				return err
+			}
 
 			// Events are handled sequentially, in a blocking manner, to ensure ordering.
 			if err := l.handleEvent(event, ctx); err != nil {

@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -21,8 +23,14 @@ func Connect(ctx context.Context, dbUrl string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+// runMigrations looks for a 'migrations' folder next to the application entrypoint.
 func runMigrations(dbUrl string) error {
-	migration, err := migrate.New("file:///home/michele/dev/microshop/cmd/products-service/migrations", dbUrl)
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	migration, err := migrate.New(fmt.Sprintf("file://%s/migrations", dir), dbUrl)
 	if err != nil {
 		return err
 	}

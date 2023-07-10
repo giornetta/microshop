@@ -21,14 +21,14 @@ type Customer struct {
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
 
-	ShippingAddress *ShippingAddress `json:"shipping_address,omitempty"`
+	ShippingAddress ShippingAddress `json:"shipping_address"`
 }
 
 type ShippingAddress struct {
-	Country string `json:"country"`
-	City    string `json:"city"`
-	ZipCode string `json:"zip_code"`
-	Street  string `json:"street"`
+	Country string `json:"country,omitempty"`
+	City    string `json:"city,omitempty"`
+	ZipCode string `json:"zip_code,omitempty"`
+	Street  string `json:"street,omitempty"`
 }
 
 type CustomerQuerier interface {

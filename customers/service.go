@@ -6,6 +6,7 @@ import (
 	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/events"
 	"github.com/google/uuid"
+	"golang.org/x/exp/slog"
 )
 
 type service struct {
@@ -95,6 +96,85 @@ func (s *service) Delete(customerId CustomerId, ctx context.Context) error {
 		CustomerEvent: events.CustomerEvent{CustomerId: customerId.String()},
 	}, ctx); err != nil {
 		return &errors.ErrInternal{Err: err}
+	}
+
+	return nil
+}
+
+type loggingService struct {
+	service Service
+	logger  *slog.Logger
+}
+
+func NewLoggingService(logger *slog.Logger, service Service) Service {
+	return &loggingService{
+		service: service,
+		logger:  logger,
+	}
+}
+
+func (s *loggingService) Create(req *CreateCustomerRequest, ctx context.Context) (*Customer, error) {
+	p, err := s.service.Create(req, ctx)
+	if err != nil {
+		if e, ok := err.(*errors.ErrInternal); ok {
+			s.logger.Error("could not create customer",
+				slog.String("method", "Create"),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (s *loggingService) GetById(customerId CustomerId, ctx context.Context) (*Customer, error) {
+	p, err := s.service.GetById(customerId, ctx)
+	if err != nil {
+		if e, ok := err.(*errors.ErrInternal); ok {
+			s.logger.Error("could not find customer by id",
+				slog.String("method", "GetById"),
+				slog.String("customer_id", customerId.String()),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (s *loggingService) UpdateShippingAddress(req *UpdateShippingAddressRequest, ctx context.Context) error {
+	err := s.service.UpdateShippingAddress(req, ctx)
+	if err != nil {
+		if e, ok := err.(*errors.ErrInternal); ok {
+			s.logger.Error("could not update shipping address",
+				slog.String("method", "UpdateShippingAddress"),
+				slog.String("customer_id", req.Id.String()),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *loggingService) Delete(customerId CustomerId, ctx context.Context) error {
+	err := s.service.Delete(customerId, ctx)
+	if err != nil {
+		if e, ok := err.(*errors.ErrInternal); ok {
+			s.logger.Error("could not delete customer",
+				slog.String("method", "Delete"),
+				slog.String("customer_id", customerId.String()),
+				slog.String("err", e.Cause().Error()),
+			)
+		}
+
+		return err
 	}
 
 	return nil

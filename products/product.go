@@ -80,7 +80,7 @@ func (r *CreateProductRequest) Validate() error {
 		),
 		validation.Field(&r.Price,
 			validation.Required,
-			validation.Min(0).Exclusive(),
+			validation.Min(float32(0)).Exclusive(),
 		),
 		validation.Field(&r.Amount,
 			validation.Min(0),

@@ -1,6 +1,11 @@
 version: '3'
 
 services:
+  ##################
+  #                #
+  # Kafka Services #
+  #                #
+  ##################
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.2
     environment:
@@ -36,21 +41,34 @@ services:
   
   kafka-init-topics:
     image: confluentinc/cp-kafka:7.3.2
-    volumes:
-       - ./message.json:/data/message.json
     depends_on:
       - kafka-broker
     command: "bash -c 'echo Waiting for Kafka to be ready...' && \
                cub kafka-ready -b kafka:29092 1 30 && \
                kafka-topics --create --topic Products --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:29092"
 
-  postgres:
+  #####################
+  #                   #
+  # Postgres Services #
+  #                   #
+  #####################
+  postgres-products: &postgres
     image: postgres
     restart: always
     ports:
       - "5432:5432"
     environment:
       POSTGRES_DB: products
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  postgres-customers:
+    image: postgres
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: customers
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   
@@ -60,4 +78,5 @@ services:
     ports:
       - 8081:8080
     depends_on:
-      - postgres
+      - postgres-products
+      - postgres-customers

@@ -3,7 +3,9 @@ package events
 const CustomerTopic Topic = "Customers"
 
 func init() {
-
+	registerEvent[CustomerCreated](CustomerCreatedType)
+	registerEvent[CustomerShippingAddressUpdated](CustomerShippingAddressUpdatedType)
+	registerEvent[CustomerDeleted](CustomerDeletedType)
 }
 
 const (
