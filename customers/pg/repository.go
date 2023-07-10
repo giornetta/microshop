@@ -2,12 +2,41 @@ package pg
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/giornetta/microshop/customers"
 	"github.com/giornetta/microshop/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type customerModel struct {
+	Id string
+
+	FirstName string
+	LastName  string
+	Email     string
+
+	Country sql.NullString
+	City    sql.NullString
+	ZipCode sql.NullString
+	Street  sql.NullString
+}
+
+func (m customerModel) ToCustomer() *customers.Customer {
+	return &customers.Customer{
+		Id:        customers.CustomerId(m.Id),
+		FirstName: m.FirstName,
+		LastName:  m.LastName,
+		Email:     m.Email,
+		ShippingAddress: &customers.ShippingAddress{
+			Country: m.Country.String,
+			City:    m.City.String,
+			ZipCode: m.ZipCode.String,
+			Street:  m.Street.String,
+		},
+	}
+}
 
 type repository struct {
 	pool *pgxpool.Pool
@@ -34,7 +63,7 @@ func (r *repository) Store(c *customers.Customer, ctx context.Context) error {
 }
 
 func (r *repository) FindByEmail(email string, ctx context.Context) (*customers.Customer, error) {
-	var c customers.Customer
+	var c customerModel
 
 	if err := r.pool.QueryRow(
 		ctx,
@@ -43,7 +72,7 @@ func (r *repository) FindByEmail(email string, ctx context.Context) (*customers.
 		email,
 	).Scan(
 		&c.Id, &c.FirstName, &c.LastName, &c.Email,
-		&c.ShippingAddress.Country, &c.ShippingAddress.City, &c.ShippingAddress.ZipCode, &c.ShippingAddress.Street,
+		&c.Country, &c.City, &c.ZipCode, &c.Street,
 	); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, &customers.ErrNotFound{Email: email}
@@ -52,11 +81,11 @@ func (r *repository) FindByEmail(email string, ctx context.Context) (*customers.
 		return nil, &errors.ErrInternal{Err: err}
 	}
 
-	return &c, nil
+	return c.ToCustomer(), nil
 }
 
 func (r *repository) FindById(id customers.CustomerId, ctx context.Context) (*customers.Customer, error) {
-	var c customers.Customer
+	var c customerModel
 
 	if err := r.pool.QueryRow(
 		ctx,
@@ -65,7 +94,7 @@ func (r *repository) FindById(id customers.CustomerId, ctx context.Context) (*cu
 		id,
 	).Scan(
 		&c.Id, &c.FirstName, &c.LastName, &c.Email,
-		&c.ShippingAddress.Country, &c.ShippingAddress.City, &c.ShippingAddress.ZipCode, &c.ShippingAddress.Street,
+		&c.Country, &c.City, &c.ZipCode, &c.Street,
 	); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, &customers.ErrNotFound{CustomerId: id}
@@ -74,7 +103,7 @@ func (r *repository) FindById(id customers.CustomerId, ctx context.Context) (*cu
 		return nil, &errors.ErrInternal{Err: err}
 	}
 
-	return &c, nil
+	return c.ToCustomer(), nil
 }
 
 func (r *repository) UpdateShippingAddress(id customers.CustomerId, addr *customers.ShippingAddress, ctx context.Context) error {

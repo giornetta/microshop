@@ -21,7 +21,7 @@ type Customer struct {
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
 
-	ShippingAddress ShippingAddress `json:"shipping_address"`
+	ShippingAddress *ShippingAddress `json:"shipping_address"`
 }
 
 type ShippingAddress struct {
