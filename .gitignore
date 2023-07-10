@@ -177,3 +177,5 @@ fabric.properties
 .env
 
 cmd/**/config.yml
+
+.vscode/
