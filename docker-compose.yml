@@ -6,53 +6,34 @@ services:
   # Kafka Services #
   #                #
   ##################
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.2
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-
-  kafka-broker:
-    image: confluentinc/cp-kafka:7.3.2
-    hostname: kafka
+  kafka:
+    image: bitnami/kafka
     ports:
       - "9092:9092"
-    depends_on:
-      - zookeeper
+      - "9094:9094"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+  
   kafka-ui:
     image: provectuslabs/kafka-ui
     ports:
       - "8080:8080"
     restart: always
     environment:
-      - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
+      - KAFKA_CLUSTERS_0_NAME=Microshop
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
     depends_on:
-      - kafka-broker
-  
-  kafka-init-topics:
-    image: confluentinc/cp-kafka:7.3.2
-    depends_on:
-      - kafka-broker
-    command: "bash -c 'echo Waiting for Kafka to be ready...' && \
-               cub kafka-ready -b kafka:29092 1 30 && \
-               kafka-topics --create --topic Products --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:29092"
+      - kafka
 
   #####################
   #                   #
   # Postgres Services #
   #                   #
   #####################
-  postgres-products: &postgres
+  products-postgres:
     image: postgres
     restart: always
     ports:
@@ -61,8 +42,8 @@ services:
       POSTGRES_DB: products
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-  postgres-customers:
+  
+  customers-postgres:
     image: postgres
     restart: always
     ports:
@@ -71,12 +52,9 @@ services:
       POSTGRES_DB: customers
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  
+
   adminer:
     image: adminer
     restart: always
     ports:
       - 8081:8080
-    depends_on:
-      - postgres-products
-      - postgres-customers

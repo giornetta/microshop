@@ -3,10 +3,11 @@ package products
 import (
 	"context"
 
-	"github.com/giornetta/microshop/errors"
-	"github.com/giornetta/microshop/events"
 	"github.com/google/uuid"
 	"golang.org/x/exp/slog"
+
+	"github.com/giornetta/microshop/errors"
+	"github.com/giornetta/microshop/events"
 )
 
 type service struct {
@@ -30,10 +31,9 @@ func (s *service) Create(req *CreateProductRequest, ctx context.Context) (*Produ
 	if err == nil {
 		return nil, &ErrAlreadyExists{Name: req.Name}
 	}
-	if err != nil {
-		if _, ok := err.(*ErrNotFound); !ok {
-			return nil, err
-		}
+
+	if _, ok := err.(*ErrNotFound); !ok {
+		return nil, err
 	}
 
 	product := &Product{

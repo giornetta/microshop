@@ -15,13 +15,11 @@ func (id CustomerId) String() string {
 }
 
 type Customer struct {
-	Id CustomerId `json:"customer_id"`
-
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
-
 	ShippingAddress *ShippingAddress `json:"shipping_address"`
+	Id              CustomerId       `json:"customer_id"`
+	FirstName       string           `json:"first_name"`
+	LastName        string           `json:"last_name"`
+	Email           string           `json:"email"`
 }
 
 type ShippingAddress struct {
