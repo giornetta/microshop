@@ -1,6 +1,0 @@
-version: '3'
-
-tasks:
-  run:
-    cmds:
-      - cd cmd/{{ .CLI_ARGS }}-service && go run main.go

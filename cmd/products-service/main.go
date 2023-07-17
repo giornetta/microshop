@@ -5,8 +5,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"time"
+
+	"github.com/twmb/franz-go/pkg/kgo"
+	"golang.org/x/exp/slog"
 
 	"github.com/giornetta/microshop/config"
 	"github.com/giornetta/microshop/events"
@@ -14,14 +18,12 @@ import (
 	"github.com/giornetta/microshop/log"
 	"github.com/giornetta/microshop/postgres"
 	"github.com/giornetta/microshop/products"
-	"github.com/giornetta/microshop/server"
-	"github.com/twmb/franz-go/pkg/kgo"
-	"golang.org/x/exp/slog"
-
 	"github.com/giornetta/microshop/products/pg"
+	"github.com/giornetta/microshop/server"
 )
 
 func main() {
+	defer os.Exit(1)
 	logger := slog.New(slog.NewTextHandler(os.Stderr))
 
 	cfg, err := config.FromYaml("./config.yml")
@@ -40,7 +42,7 @@ func main() {
 	)
 	if err != nil {
 		logger.Error("could not create kafka client", slog.String("err", err.Error()))
-		os.Exit(1)
+		runtime.Goexit()
 	}
 	defer client.Close()
 
@@ -51,6 +53,7 @@ func main() {
 	pgPool, err := postgres.Connect(ctx, cfg.Postgres.ConnectionString())
 	if err != nil {
 		logger.Error("could not connect to postgres", slog.String("err", err.Error()))
+		runtime.Goexit()
 	}
 	defer pgPool.Close()
 
@@ -95,6 +98,7 @@ func main() {
 		logger.Info("Server started", slog.Int("port", cfg.Server.Port))
 		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("could not run server", slog.String("err", err.Error()))
+			signals <- os.Interrupt
 		}
 
 		wg.Done()

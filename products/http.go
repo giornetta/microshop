@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/giornetta/microshop/errors"
-	"github.com/giornetta/microshop/respond"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/giornetta/microshop/errors"
+	"github.com/giornetta/microshop/respond"
 )
 
 type handler struct {
@@ -141,6 +141,7 @@ func (h *handler) handleRestockProduct(w http.ResponseWriter, r *http.Request) {
 
 	respond.JSON(w, http.StatusOK, nil)
 }
+
 func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
 	productId := chi.URLParam(r, "id")
 

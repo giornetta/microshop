@@ -2,19 +2,20 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
+	"github.com/caarlos0/env/v9"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Server   *ServerConfig   `yaml:"server"`
-	Postgres *PostgresConfig `yaml:"postgres"`
-	Kafka    *KafkaConfig    `yaml:"kafka"`
+	Server   ServerConfig   `yaml:"server"`
+	Postgres PostgresConfig `yaml:"postgres" envPrefix:"POSTGRES_"`
+	Kafka    KafkaConfig    `yaml:"kafka" envPrefix:"KAFKA_"`
 }
 
 func FromYaml(filename string) (*Config, error) {
-	yfile, err := ioutil.ReadFile(filename)
+	yfile, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -27,16 +28,28 @@ func FromYaml(filename string) (*Config, error) {
 	return &cfg, nil
 }
 
+func FromEnv() (*Config, error) {
+	var cfg Config
+
+	opts := env.Options{UseFieldNameByDefault: true}
+
+	if err := env.ParseWithOptions(&cfg, opts); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
 type ServerConfig struct {
 	Port int `yaml:"port"`
 }
 
 type PostgresConfig struct {
 	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database"`
+	Port     int    `yaml:"port"`
 	SSL      bool   `yaml:"ssl"`
 }
 
@@ -52,6 +65,6 @@ func (c *PostgresConfig) ConnectionString() string {
 }
 
 type KafkaConfig struct {
-	BrokerAddrs   []string `yaml:"brokers"`
-	ConsumerGroup string   `yaml:"consumer-group"`
+	ConsumerGroup string   `yaml:"consumer-group" env:"CG"`
+	BrokerAddrs   []string `yaml:"brokers" env:"BROKERS"`
 }
