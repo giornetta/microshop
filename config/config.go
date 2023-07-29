@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/caarlos0/env/v9"
 	"gopkg.in/yaml.v3"
@@ -12,6 +13,7 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 	Postgres PostgresConfig `yaml:"postgres" envPrefix:"POSTGRES_"`
 	Kafka    KafkaConfig    `yaml:"kafka" envPrefix:"KAFKA_"`
+	Auth     AuthConfig     `yaml:"auth" envPrefix:"AUTH_"`
 }
 
 func FromYaml(filename string) (*Config, error) {
@@ -67,4 +69,11 @@ func (c *PostgresConfig) ConnectionString() string {
 type KafkaConfig struct {
 	ConsumerGroup string   `yaml:"consumer-group" env:"CG"`
 	BrokerAddrs   []string `yaml:"brokers" env:"BROKERS"`
+}
+
+type AuthConfig struct {
+	Key           string        `yaml:"key" env:"KEY"`
+	PEM           bool          `yaml:"pem" env:"PEM"`
+	Issuer        string        `yaml:"issuer" env:"ISSUER"`
+	TokenDuration time.Duration `yaml:"token-duration" env:"TOKEN_DURATION"`
 }
