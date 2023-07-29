@@ -19,7 +19,6 @@ type Customer struct {
 	Id              CustomerId       `json:"customer_id"`
 	FirstName       string           `json:"first_name"`
 	LastName        string           `json:"last_name"`
-	Email           string           `json:"email"`
 }
 
 type ShippingAddress struct {
@@ -31,7 +30,6 @@ type ShippingAddress struct {
 
 type CustomerQuerier interface {
 	FindById(id CustomerId, ctx context.Context) (*Customer, error)
-	FindByEmail(email string, ctx context.Context) (*Customer, error)
 }
 
 type CustomerStorer interface {
@@ -53,13 +51,16 @@ type Service interface {
 }
 
 type CreateCustomerRequest struct {
-	FirstName string
-	LastName  string
-	Email     string
+	CustomerId CustomerId
+	FirstName  string
+	LastName   string
 }
 
 func (r *CreateCustomerRequest) Validate() error {
 	return validation.ValidateStruct(r,
+		validation.Field(&r.CustomerId,
+			validation.Required,
+		),
 		validation.Field(&r.FirstName,
 			validation.Required,
 			validation.Length(2, 10),
@@ -69,10 +70,6 @@ func (r *CreateCustomerRequest) Validate() error {
 			validation.Required,
 			validation.Length(2, 10),
 			is.Alpha,
-		),
-		validation.Field(&r.Email,
-			validation.Required,
-			is.EmailFormat,
 		),
 	)
 }

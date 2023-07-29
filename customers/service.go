@@ -5,7 +5,6 @@ import (
 
 	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/events"
-	"github.com/google/uuid"
 	"golang.org/x/exp/slog"
 )
 
@@ -26,9 +25,9 @@ func (s *service) Create(req *CreateCustomerRequest, ctx context.Context) (*Cust
 		return nil, &errors.ErrBadRequest{Err: err}
 	}
 
-	_, err := s.querier.FindByEmail(req.Email, ctx)
+	_, err := s.querier.FindById(req.CustomerId, ctx)
 	if err == nil {
-		return nil, &ErrAlreadyExists{Email: req.Email}
+		return nil, &ErrAlreadyExists{Id: req.CustomerId}
 	}
 	if err != nil {
 		if _, ok := err.(*ErrNotFound); !ok {
@@ -37,17 +36,15 @@ func (s *service) Create(req *CreateCustomerRequest, ctx context.Context) (*Cust
 	}
 
 	c := &Customer{
-		Id:        CustomerId(uuid.NewString()),
+		Id:        req.CustomerId,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
-		Email:     req.Email,
 	}
 
 	if err := s.publisher.Publish(&events.CustomerCreated{
 		CustomerEvent: events.CustomerEvent{CustomerId: c.Id.String()},
 		FirstName:     c.FirstName,
 		LastName:      c.LastName,
-		Email:         c.Email,
 	}, ctx); err != nil {
 		return nil, &errors.ErrInternal{Err: err}
 	}

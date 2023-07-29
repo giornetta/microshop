@@ -39,7 +39,6 @@ func (h *productHandler) handleCreated(evt events.CustomerCreated, ctx context.C
 		Id:        CustomerId(evt.CustomerId),
 		FirstName: evt.FirstName,
 		LastName:  evt.LastName,
-		Email:     evt.Email,
 	}
 
 	if err := h.repository.Store(p, ctx); err != nil {

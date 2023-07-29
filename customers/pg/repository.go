@@ -15,7 +15,6 @@ type customerModel struct {
 
 	FirstName string
 	LastName  string
-	Email     string
 
 	Country sql.NullString
 	City    sql.NullString
@@ -28,7 +27,6 @@ func (m customerModel) ToCustomer() *customers.Customer {
 		Id:        customers.CustomerId(m.Id),
 		FirstName: m.FirstName,
 		LastName:  m.LastName,
-		Email:     m.Email,
 		ShippingAddress: &customers.ShippingAddress{
 			Country: m.Country.String,
 			City:    m.City.String,
@@ -52,9 +50,9 @@ func (r *repository) Store(c *customers.Customer, ctx context.Context) error {
 	if _, err := r.pool.Exec(
 		ctx,
 		`INSERT INTO
-		customers(customer_id, first_name, last_name, email)
+		customers(customer_id, first_name, last_name)
 		VALUES($1, $2, $3, $4);`,
-		c.Id, c.FirstName, c.LastName, c.Email,
+		c.Id, c.FirstName, c.LastName,
 	); err != nil {
 		return err
 	}
@@ -62,38 +60,16 @@ func (r *repository) Store(c *customers.Customer, ctx context.Context) error {
 	return nil
 }
 
-func (r *repository) FindByEmail(email string, ctx context.Context) (*customers.Customer, error) {
-	var c customerModel
-
-	if err := r.pool.QueryRow(
-		ctx,
-		`SELECT customer_id, first_name, last_name, email, shipping_country, shipping_city, shipping_zipcode, shipping_street
-		FROM customers WHERE email = $1`,
-		email,
-	).Scan(
-		&c.Id, &c.FirstName, &c.LastName, &c.Email,
-		&c.Country, &c.City, &c.ZipCode, &c.Street,
-	); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, &customers.ErrNotFound{Email: email}
-		}
-
-		return nil, &errors.ErrInternal{Err: err}
-	}
-
-	return c.ToCustomer(), nil
-}
-
 func (r *repository) FindById(id customers.CustomerId, ctx context.Context) (*customers.Customer, error) {
 	var c customerModel
 
 	if err := r.pool.QueryRow(
 		ctx,
-		`SELECT customer_id, first_name, last_name, email, shipping_country, shipping_city, shipping_zipcode, shipping_street
+		`SELECT customer_id, first_name, last_name, shipping_country, shipping_city, shipping_zipcode, shipping_street
 		FROM customers WHERE customer_id = $1`,
 		id,
 	).Scan(
-		&c.Id, &c.FirstName, &c.LastName, &c.Email,
+		&c.Id, &c.FirstName, &c.LastName,
 		&c.Country, &c.City, &c.ZipCode, &c.Street,
 	); err != nil {
 		if err == pgx.ErrNoRows {

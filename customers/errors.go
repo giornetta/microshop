@@ -27,11 +27,11 @@ func (err *ErrNotFound) StatusCode() int {
 }
 
 type ErrAlreadyExists struct {
-	Email string
+	Id CustomerId
 }
 
 func (err *ErrAlreadyExists) Error() string {
-	return fmt.Sprintf("customer with email=%s already exists", err.Email)
+	return fmt.Sprintf("customer with id=%s already exists", err.Id)
 }
 
 func (err *ErrAlreadyExists) StatusCode() int {

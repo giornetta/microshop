@@ -2,8 +2,12 @@ package identity
 
 import (
 	"context"
+	"regexp"
+	"strings"
 
 	"github.com/giornetta/microshop/auth"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
 type IdentityId string
@@ -47,6 +51,22 @@ type SignUpRequest struct {
 	Password string
 }
 
+func (r *SignUpRequest) Validate() error {
+	r.Email = strings.TrimSpace(r.Email)
+
+	return validation.ValidateStruct(r,
+		validation.Field(&r.Email,
+			validation.Required,
+			is.EmailFormat,
+		),
+		validation.Field(&r.Password,
+			validation.Required,
+			validation.Length(8, 24),
+			validation.Match(regexp.MustCompile("^[a-zA-Z0-9!#@?]+")),
+		),
+	)
+}
+
 type SignUpResponse struct {
 	IdentityId IdentityId
 	Token      string
@@ -57,6 +77,21 @@ type SignInRequest struct {
 	Password string
 }
 
+func (r *SignInRequest) Validate() error {
+	r.Email = strings.TrimSpace(r.Email)
+
+	return validation.ValidateStruct(r,
+		validation.Field(&r.Email,
+			validation.Required,
+			is.EmailFormat,
+		),
+		validation.Field(&r.Password,
+			validation.Required,
+			validation.Length(8, 24),
+		),
+	)
+}
+
 type SignInResponse struct {
 	Token string
 }
@@ -64,4 +99,17 @@ type SignInResponse struct {
 type UpdateRolesRequest struct {
 	Id    IdentityId
 	Roles []auth.Role
+}
+
+func (r *UpdateRolesRequest) Validate() error {
+	return validation.ValidateStruct(r,
+		validation.Field(&r.Id,
+			validation.Required,
+		),
+		validation.Field(&r.Roles,
+			validation.Each(
+				validation.In(auth.CustomerRole, auth.AdminRole, auth.CourierRole),
+			),
+		),
+	)
 }

@@ -27,7 +27,7 @@ func NewRouter(service Service) http.Handler {
 	)
 
 	router.Route("/api/v1/customers", func(r chi.Router) {
-		r.Post("/", h.handleCreateCustomer)
+		r.Post("/{id}", h.handleCreateCustomer)
 		r.Get("/{id}", h.handleGetCustomer)
 		r.Put("/{id}/shipping", h.handleUpdateShippingAddress)
 		r.Delete("/{id}", h.handleDeleteCustomer)
@@ -39,10 +39,11 @@ func NewRouter(service Service) http.Handler {
 type createCustomerRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
 }
 
 func (h *handler) handleCreateCustomer(w http.ResponseWriter, r *http.Request) {
+	customerId := chi.URLParam(r, "id")
+
 	var req createCustomerRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -51,9 +52,9 @@ func (h *handler) handleCreateCustomer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c, err := h.service.Create(&CreateCustomerRequest{
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Email:     req.Email,
+		CustomerId: CustomerId(customerId),
+		FirstName:  req.FirstName,
+		LastName:   req.LastName,
 	}, r.Context())
 	if err != nil {
 		respond.Err(w, err)

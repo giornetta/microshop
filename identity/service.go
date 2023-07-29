@@ -22,7 +22,9 @@ func NewService(issuer auth.Issuer, repository IdentityRepository) Service {
 }
 
 func (s *service) SignUp(req *SignUpRequest, ctx context.Context) (*SignUpResponse, error) {
-	// TODO Validate Inputs
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
 
 	exists, err := s.repository.ExistsByEmail(req.Email, ctx)
 	if err != nil {
@@ -61,7 +63,9 @@ func (s *service) SignUp(req *SignUpRequest, ctx context.Context) (*SignUpRespon
 }
 
 func (s *service) SignIn(req *SignInRequest, ctx context.Context) (*SignInResponse, error) {
-	// TODO Validate
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
 
 	ident, err := s.repository.FindByEmail(req.Email, ctx)
 	if err != nil {
@@ -83,8 +87,9 @@ func (s *service) SignIn(req *SignInRequest, ctx context.Context) (*SignInRespon
 }
 
 func (s *service) UpdateRoles(req *UpdateRolesRequest, ctx context.Context) error {
-	// TODO Validate
-
+	if err := req.Validate(); err != nil {
+		return err
+	}
 	ident, err := s.repository.FindById(req.Id, ctx)
 	if err != nil {
 		return err
