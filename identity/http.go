@@ -14,10 +14,11 @@ import (
 )
 
 type handler struct {
-	Service Service
+	Service  Service
+	Verifier auth.Verifier
 }
 
-func NewRouter(service Service) http.Handler {
+func NewRouter(service Service, verifier auth.Verifier) http.Handler {
 	h := &handler{
 		Service: service,
 	}
@@ -32,7 +33,11 @@ func NewRouter(service Service) http.Handler {
 	router.Route("/api/v1/identity", func(r chi.Router) {
 		r.Post("/signup", h.handleSignUp)
 		r.Post("/signin", h.handleSignIn)
-		r.Put("/roles/{id}", h.handleUpdateRoles)
+
+		r.With(
+			auth.AuthenticateMiddleware(verifier),
+			auth.AuthorizeRolesMiddleware([]auth.Role{auth.AdminRole}),
+		).Put("/roles/{id}", h.handleUpdateRoles)
 	})
 
 	return router

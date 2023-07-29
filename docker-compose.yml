@@ -10,7 +10,7 @@ services:
     image: bitnami/kafka
     networks:
       - microshop_network
-    restart: unless-stopped
+    restart: always
     ports:
       - "9092:9092"
       - "9094:9094"

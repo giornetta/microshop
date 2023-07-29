@@ -81,7 +81,10 @@ func TestJWT(t *testing.T) {
 
 	ctx := context.WithValue(context.Background(), auth.ContextKey, token)
 
-	tokenFromCtx := auth.FromContext(ctx)
+	tokenFromCtx, err := auth.FromContext(ctx)
+	if err != nil {
+		t.FailNow()
+	}
 
 	if !reflect.DeepEqual(token, tokenFromCtx) {
 		t.FailNow()

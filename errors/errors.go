@@ -44,3 +44,23 @@ func (e *ErrBadRequest) Cause() error {
 func (e *ErrBadRequest) StatusCode() int {
 	return http.StatusBadRequest
 }
+
+type ErrUnauthorized struct {
+	Err error
+}
+
+func (e *ErrUnauthorized) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+
+	return "Unauthorized"
+}
+
+func (e *ErrUnauthorized) Cause() error {
+	return e.Err
+}
+
+func (e *ErrUnauthorized) StatusCode() int {
+	return http.StatusUnauthorized
+}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/giornetta/microshop/auth"
 	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/respond"
 	"github.com/go-chi/chi/v5"
@@ -11,12 +12,14 @@ import (
 )
 
 type handler struct {
-	service Service
+	service  Service
+	verifier auth.Verifier
 }
 
-func NewRouter(service Service) http.Handler {
+func NewRouter(service Service, verifier auth.Verifier) http.Handler {
 	h := &handler{
-		service: service,
+		service:  service,
+		verifier: verifier,
 	}
 
 	router := chi.NewRouter()
@@ -27,10 +30,13 @@ func NewRouter(service Service) http.Handler {
 	)
 
 	router.Route("/api/v1/customers", func(r chi.Router) {
-		r.Post("/{id}", h.handleCreateCustomer)
+		r.Use(auth.AuthenticateMiddleware(h.verifier))
+
+		r.With(auth.AuthorizeSubjectMiddleware).Post("/{id}", h.handleCreateCustomer)
+		r.With(auth.AuthorizeSubjectMiddleware).Put("/{id}/shipping", h.handleUpdateShippingAddress)
+		r.With(auth.AuthorizeSubjectMiddleware).Delete("/{id}", h.handleDeleteCustomer)
+
 		r.Get("/{id}", h.handleGetCustomer)
-		r.Put("/{id}/shipping", h.handleUpdateShippingAddress)
-		r.Delete("/{id}", h.handleDeleteCustomer)
 	})
 
 	return router

@@ -51,7 +51,7 @@ func (r *repository) Store(c *customers.Customer, ctx context.Context) error {
 		ctx,
 		`INSERT INTO
 		customers(customer_id, first_name, last_name)
-		VALUES($1, $2, $3, $4);`,
+		VALUES($1, $2, $3);`,
 		c.Id, c.FirstName, c.LastName,
 	); err != nil {
 		return err

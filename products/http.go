@@ -7,17 +7,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/giornetta/microshop/auth"
 	"github.com/giornetta/microshop/errors"
 	"github.com/giornetta/microshop/respond"
 )
 
 type handler struct {
-	Service Service
+	service  Service
+	verifier auth.Verifier
 }
 
-func NewRouter(service Service) http.Handler {
+func NewRouter(service Service, verifier auth.Verifier) http.Handler {
 	h := &handler{
-		Service: service,
+		service:  service,
+		verifier: verifier,
 	}
 
 	router := chi.NewRouter()
@@ -28,12 +31,17 @@ func NewRouter(service Service) http.Handler {
 	)
 
 	router.Route("/api/v1/products", func(r chi.Router) {
-		r.Post("/", h.handleCreateProduct)
 		r.Get("/", h.handleListProducts)
 		r.Get("/{id}", h.handleGetProduct)
-		r.Put("/{id}", h.handleUpdateProduct)
-		r.Put("/restock/{id}", h.handleRestockProduct)
-		r.Delete("/{id}", h.handleDeleteProduct)
+
+		protectedRoutes := r.With(
+			auth.AuthenticateMiddleware(h.verifier),
+			auth.AuthorizeRolesMiddleware([]auth.Role{auth.AdminRole}),
+		)
+		protectedRoutes.Post("/", h.handleCreateProduct)
+		protectedRoutes.Put("/{id}", h.handleUpdateProduct)
+		protectedRoutes.Put("/restock/{id}", h.handleRestockProduct)
+		protectedRoutes.Delete("/{id}", h.handleDeleteProduct)
 	})
 
 	return router
@@ -54,7 +62,7 @@ func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := h.Service.Create(&CreateProductRequest{
+	p, err := h.service.Create(&CreateProductRequest{
 		Name:        req.Name,
 		Description: req.Description,
 		Price:       req.Price,
@@ -69,7 +77,7 @@ func (h *handler) handleCreateProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) handleListProducts(w http.ResponseWriter, r *http.Request) {
-	products, err := h.Service.List(r.Context())
+	products, err := h.service.List(r.Context())
 	if err != nil {
 		respond.Err(w, err)
 		return
@@ -81,7 +89,7 @@ func (h *handler) handleListProducts(w http.ResponseWriter, r *http.Request) {
 func (h *handler) handleGetProduct(w http.ResponseWriter, r *http.Request) {
 	productId := chi.URLParam(r, "id")
 
-	product, err := h.Service.GetById(ProductId(productId), r.Context())
+	product, err := h.service.GetById(ProductId(productId), r.Context())
 	if err != nil {
 		respond.Err(w, err)
 		return
@@ -105,7 +113,7 @@ func (h *handler) handleUpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Service.Update(&UpdateProductRequest{
+	if err := h.service.Update(&UpdateProductRequest{
 		Id:          ProductId(id),
 		Name:        req.Name,
 		Description: req.Description,
@@ -131,7 +139,7 @@ func (h *handler) handleRestockProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Service.Restock(&RestockProductRequest{
+	if err := h.service.Restock(&RestockProductRequest{
 		Id:     ProductId(id),
 		Amount: int(req.Amount),
 	}, r.Context()); err != nil {
@@ -145,7 +153,7 @@ func (h *handler) handleRestockProduct(w http.ResponseWriter, r *http.Request) {
 func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
 	productId := chi.URLParam(r, "id")
 
-	if err := h.Service.Delete(ProductId(productId), r.Context()); err != nil {
+	if err := h.service.Delete(ProductId(productId), r.Context()); err != nil {
 		respond.Err(w, err)
 		return
 	}

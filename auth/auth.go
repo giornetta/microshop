@@ -26,13 +26,13 @@ type contextKey string
 
 const ContextKey contextKey = "AUTH_TOKEN"
 
-func FromContext(ctx context.Context) Token {
+func FromContext(ctx context.Context) (Token, error) {
 	val := ctx.Value(ContextKey)
 	switch t := val.(type) {
 	case *jwtToken:
-		return t
+		return t, nil
 	default:
-		panic("could not match token type")
+		return nil, errors.New("no token")
 	}
 }
 

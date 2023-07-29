@@ -12,6 +12,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"golang.org/x/exp/slog"
 
+	"github.com/giornetta/microshop/auth"
 	"github.com/giornetta/microshop/config"
 	"github.com/giornetta/microshop/events"
 	"github.com/giornetta/microshop/kafka"
@@ -70,7 +71,13 @@ func main() {
 		products.NewService(productRepository, producer),
 	)
 
-	s := server.New(products.NewRouter(productService), &server.Options{
+	authVerifier, err := auth.NewJWTVerifier([]byte(cfg.Auth.Key), auth.WithAllowedIssuer(cfg.Auth.Issuer))
+	if err != nil {
+		logger.Error("could not create verifier", slog.String("err", err.Error()))
+		runtime.Goexit()
+	}
+
+	s := server.New(products.NewRouter(productService, authVerifier), &server.Options{
 		Port:         cfg.Server.Port,
 		ReadTimeout:  time.Second * 5,
 		WriteTimeout: time.Second * 5,

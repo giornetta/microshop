@@ -53,9 +53,19 @@ func main() {
 		runtime.Goexit()
 	}
 
+	// Setup Verifier
+	authVerifier, err := auth.NewJWTVerifier(
+		[]byte(cfg.Auth.Key),
+		auth.WithAllowedIssuer(cfg.Auth.Issuer),
+	)
+	if err != nil {
+		logger.Error("could not create verifier", slog.String("err", err.Error()))
+		runtime.Goexit()
+	}
+
 	identityService := identity.NewService(authIssuer, identityRepository)
 
-	s := server.New(identity.NewRouter(identityService), &server.Options{
+	s := server.New(identity.NewRouter(identityService, authVerifier), &server.Options{
 		Port:         cfg.Server.Port,
 		ReadTimeout:  time.Second * 5,
 		WriteTimeout: time.Second * 5,
